@@ -323,6 +323,15 @@
     box.className = isError ? 'error' : 'success';
   }
 
+  // Button papunta sa application page, matapos matagumpay na ma-submit ang inquiry
+  function showProceedButton(inquiryId) {
+    var go = document.createElement('a');
+    go.href = APPLICATION_PAGE + '?inquiry=' + encodeURIComponent(inquiryId);
+    go.textContent = 'Proceed to application';
+    go.style.cssText = 'display:block; margin-top:14px; padding:12px; border-radius:6px; background:#2563eb; color:#fff; text-align:center; font-weight:bold; text-decoration:none';
+    document.getElementById('contactBox').insertAdjacentElement('beforebegin', go);
+  }
+
   // Pagpili ng brand: ipinapakita ang choice (listing/specify) at pinupunan ang listahan ng units
   function onBrandChange() {
     var brand = document.getElementById('brandSelect').value;
@@ -414,6 +423,7 @@
         document.getElementById('inquiryForm').style.display = 'none';
         showMessage('Thank you! Your inquiry was sent. We will contact you soon.', false);
         showContact(result.branch);
+        if (result.inquiryId) showProceedButton(result.inquiryId);
       } else {
         showMessage(result.message, true);
         button.disabled = false;
