@@ -56,12 +56,6 @@
         <label id="branchPicker">Select Branch (Purchase/Release Location) *
           <select name="branch" required>
             <option value="">Choose one</option>
-            <option>K Riders Poblacion-Liloan</option>
-            <option>K Riders Catarman-Liloan</option>
-            <option>K Riders Tabok-Mandaue</option>
-            <option>K Riders Centro-Mandaue</option>
-            <option>K Riders Babag II-LLC</option>
-		            <option>K Riders Maribago-LLC</option>
           </select></label>
         <label id="branchFixed" style="display:none">Branch
           <input id="branchFixedText" readonly tabindex="-1" style="background:#e2e8f0"></label>
@@ -70,6 +64,7 @@
       </fieldset>
     </form>
     <p id="msg"></p>
+    <div id="contactBox" style="font-size:14px; margin-top:10px"></div>
   </div>
 </div>
 
@@ -84,25 +79,84 @@
   var ref = params.get('ref') || '';
     var src = params.get('src') || '';
 
-  // Mga branch (dapat kapareho ng listahan sa Apps Script)
-  var BRANCHES = ['K Riders Poblacion-Liloan', 'K Riders Catarman-Liloan', 'K Riders Tabok-Mandaue',
-    'K Riders Centro-Mandaue', 'K Riders Babag II-LLC', 'K Riders Maribago-LLC'];
+  var linkOk = !!(ref && src); // magiging false kung hindi tama ang link o ang branch
+  var signedIn = false;
+  var branchesReady = false;
+  var branchList = [];         // galing sa Branch Contacts tab ng Google Sheet
 
-  // Walk-in: ang branch ay galing sa link, hindi na pipili ang customer
-  if (src === 'walkin') {
-    var walkInBranch = BRANCHES.filter(function (b) {
-      return b.toLowerCase() === ref.trim().replace(/\s+/g, ' ').toLowerCase();
-    })[0];
-    if (walkInBranch) {
-      var picker = document.querySelector('select[name="branch"]');
-      picker.required = false;
-      picker.disabled = true; // hindi na ito ipapadala
-      document.getElementById('branchPicker').style.display = 'none';
-      document.getElementById('branchFixed').style.display = 'block';
-      document.getElementById('branchFixedText').value = walkInBranch;
-    } else {
-      ref = ''; // hindi kilalang branch, kaya invalid link
+  // Bubukas lang ang form kapag tama ang link, nakuha na ang branches, at naka-sign in na
+  function updateForm() {
+    document.getElementById('fields').disabled = !(linkOk && branchesReady && signedIn);
+  }
+
+  // Kinukuha ang listahan ng branches at contacts mula sa Google Sheet
+  async function loadBranches() {
+    try {
+      var res = await fetch(SCRIPT_URL);
+      var result = await res.json();
+      branchList = result.branches || [];
+    } catch (err) {
+      linkOk = false;
+      showMessage('Could not load the form. Check your connection and refresh the page.', true);
+      return;
     }
+    var picker = document.querySelector('select[name="branch"]');
+    branchList.forEach(function (b) {
+      var option = document.createElement('option');
+      option.value = b.branch;
+      option.textContent = b.branch;
+      picker.appendChild(option);
+    });
+
+    // Walk-in: ang branch ay galing sa link, hindi na pipili ang customer
+    if (src === 'walkin') {
+      var wanted = ref.trim().replace(/\s+/g, ' ').toLowerCase();
+      var found = branchList.filter(function (b) {
+        return b.branch.toLowerCase() === wanted;
+      })[0];
+      if (found) {
+        picker.required = false;
+        picker.disabled = true; // hindi na ito ipapadala
+        document.getElementById('branchPicker').style.display = 'none';
+        document.getElementById('branchFixed').style.display = 'block';
+        document.getElementById('branchFixedText').value = found.branch;
+      } else {
+        linkOk = false;
+        showMessage('Invalid link. Please scan the QR code again.', true);
+      }
+    }
+    branchesReady = true;
+    updateForm();
+  }
+
+  // Ipinapakita ang contact ng branch pagkatapos mag-submit
+  function showContact(branchName) {
+    var box = document.getElementById('contactBox');
+    box.textContent = '';
+    var found = branchList.filter(function (b) { return b.branch === branchName; })[0];
+    if (!found) return;
+    var heading = document.createElement('div');
+    heading.textContent = 'Or contact us:';
+    var line = document.createElement('div');
+    line.style.marginTop = '6px';
+    line.appendChild(document.createTextNode(found.branch + ' - '));
+    if (found.contact) {
+      var phone = document.createElement('a');
+      phone.href = 'tel:' + found.contact.replace(/[^0-9+]/g, '');
+      phone.textContent = found.contact;
+      line.appendChild(phone);
+    }
+    if (found.link) {
+      line.appendChild(document.createTextNode(' - '));
+      var fb = document.createElement('a');
+      fb.href = found.link;
+      fb.target = '_blank';
+      fb.rel = 'noopener';
+      fb.textContent = 'Facebook Page';
+      line.appendChild(fb);
+    }
+    box.appendChild(heading);
+    box.appendChild(line);
   }
 
   function showMessage(text, isError) {
@@ -116,7 +170,8 @@
     idToken = response.credential;
     var payload = JSON.parse(atob(idToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
     document.getElementById('who').textContent = 'Signed in as ' + payload.email;
-    document.getElementById('fields').disabled = false; // saka lang magbubukas ang form
+    signedIn = true;
+    updateForm(); // saka lang magbubukas ang form
   }
 
   function initGoogle() {
@@ -145,6 +200,7 @@
       if (result.ok) {
         document.getElementById('inquiryForm').style.display = 'none';
         showMessage('Thank you! Your inquiry was sent. We will contact you soon.', false);
+        showContact(result.branch);
       } else {
         showMessage(result.message, true);
         button.disabled = false;
@@ -156,8 +212,10 @@
   }
 
   if (!ref || !src) {
-	  document.getElementById('fields').disabled = true;
+    document.getElementById('fields').disabled = true;
     showMessage('Invalid link. Please scan the QR code again.', true);
+  } else {
+    loadBranches();
   }
 </script>
 <script src="https://accounts.google.com/gsi/client" async defer onload="initGoogle()"></script>
