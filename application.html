@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K RIDERS APPLICATION - INSTALLMENT</title>
+<style>
+  body { margin: 0; font-family: Arial, sans-serif; background: #eef2f7; color: #0f2540; }
+  .card { max-width: 520px; margin: 16px auto; background: #fff; border-radius: 10px; overflow: hidden; }
+  header { background: #0f2540; color: #fff; padding: 18px 20px; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 6px 0 0; font-size: 14px; color: #cbd5e1; }
+  .body { padding: 8px 20px 20px; }
+  h2 { font-size: 16px; margin: 28px 0 0; padding-top: 14px; border-top: 1px solid #e2e8f0; }
+  label { display: block; margin-top: 14px; font-size: 14px; font-weight: bold; }
+  input, select, textarea { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 10px;
+    border: 1px solid #94a3b8; border-radius: 6px; font-size: 16px; font-family: inherit; }
+  input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px solid #2563eb; }
+  input[readonly] { background: #e2e8f0; }
+  fieldset { border: 0; padding: 0; margin: 0; }
+  #appForm { position: relative; }
+  #signInOverlay { position: absolute; inset: 0; z-index: 5; cursor: pointer; background: transparent; }
+  .choices { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 6px; }
+  .choices label { margin-top: 0; font-weight: normal; display: flex; align-items: center; gap: 6px; }
+  .choices input { width: auto; margin: 0; }
+  .hint { font-size: 13px; color: #64748b; margin: 4px 0 0; }
+  #quoteBox { margin-top: 14px; padding: 12px; border-radius: 6px; background: #f1f5f9; font-size: 14px; }
+  #quoteValue { font-size: 20px; font-weight: bold; margin-top: 4px; }
+  button { width: 100%; margin-top: 20px; padding: 12px; border: 0; border-radius: 6px;
+    background: #2563eb; color: #fff; font-size: 16px; font-weight: bold; }
+  button:disabled { background: #94a3b8; }
+  #who { font-size: 14px; margin: 10px 0 0; }
+  #checkMsg { font-size: 14px; font-weight: bold; margin: 10px 0 0; }
+  #msg { margin-top: 14px; font-size: 14px; font-weight: bold; }
+  .error { color: #b91c1c; } .success { color: #15803d; }
+</style>
+</head>
+<body>
+<div class="card">
+  <header>
+    <h1>APPLICATION FOR INSTALLMENT</h1>
+    <p>Please complete the form below. All amounts are in Philippine pesos.</p>
+  </header>
+  <div class="body">
+    <p style="font-size:14px">1. Sign in with the same Google account you used for your inquiry.</p>
+    <div id="googleButton"></div>
+    <p id="who"></p>
+    <p id="checkMsg"></p>
+
+    <form id="appForm" onsubmit="submitForm(event)">
+      <div id="signInOverlay"></div>
+      <fieldset id="fields" disabled>
+
+        <h2>Applicant Information</h2>
+        <label>Last Name<input id="pLast" readonly></label>
+        <label>First Name<input id="pFirst" readonly></label>
+        <label>Middle Name<input id="pMiddle" readonly></label>
+        <label>Suffix<input id="pSuffix" readonly></label>
+        <label>Email<input id="pEmail" readonly></label>
+        <label>Phone Number<input id="pPhone" readonly></label>
+        <p class="hint">To change these, please edit your inquiry on the inquiry page.</p>
+        <label>Date of Birth *<input type="date" name="dob" id="dob" required></label>
+        <label>Facebook Account<input name="facebook"></label>
+
+        <label>Civil Status *</label>
+        <div class="choices">
+          <label><input type="radio" name="civilStatus" value="Single" required> Single</label>
+          <label><input type="radio" name="civilStatus" value="Married" required> Married</label>
+          <label><input type="radio" name="civilStatus" value="Others" required> Others</label>
+        </div>
+        <input name="civilOther" id="civilOther" placeholder="Please specify" style="display:none">
+
+        <label>Current Address</label>
+        <label>Sitio/Street *<input name="sitio" required></label>
+        <label>Barangay *<input name="barangay" required></label>
+        <label>Municipality/City *<input name="city" required></label>
+        <label>Province *<input name="province" required></label>
+        <label>Region *<input name="region" required></label>
+        <label>Length of Stay (years) *
+          <input name="stayYears" type="number" min="0" max="100" step="1" inputmode="numeric" required></label>
+
+        <label>Source of Income *</label>
+        <div class="choices">
+          <label><input type="radio" name="incomeSource" value="Employed" required> Employed</label>
+          <label><input type="radio" name="incomeSource" value="Business" required> Business</label>
+          <label><input type="radio" name="incomeSource" value="Profession" required> Profession</label>
+          <label><input type="radio" name="incomeSource" value="Others" required> Others</label>
+        </div>
+        <input name="incomeOther" id="incomeOther" placeholder="Please specify" style="display:none">
+
+        <h2>Co-maker Information</h2>
+        <label>Last Name *<input name="cmLast" required></label>
+        <label>First Name *<input name="cmFirst" required></label>
+        <label>Middle Name<input name="cmMiddle"></label>
+        <label>Suffix<input name="cmSuffix"></label>
+        <label>Date of Birth *<input type="date" name="cmDob" id="cmDob" required></label>
+        <label>Source of Income of Co-maker *</label>
+        <div class="choices">
+          <label><input type="radio" name="cmIncomeSource" value="Employed" required> Employed</label>
+          <label><input type="radio" name="cmIncomeSource" value="Business" required> Business</label>
+          <label><input type="radio" name="cmIncomeSource" value="Profession" required> Profession</label>
+          <label><input type="radio" name="cmIncomeSource" value="Others" required> Others</label>
+        </div>
+        <input name="cmIncomeOther" id="cmIncomeOther" placeholder="Please specify" style="display:none">
+
+        <h2>Monthly Income of Applicant</h2>
+        <div id="incomeFields"></div>
+        <label>Total<input id="totalIncome" readonly></label>
+
+        <h2>Monthly Expenses of Applicant</h2>
+        <div id="expenseFields"></div>
+        <label>Total<input id="totalExpense" readonly></label>
+
+        <label>Net Income<input id="netIncome" readonly></label>
+
+        <h2>Installment Term</h2>
+        <label>Brand *
+          <select name="brand" id="brandSelect" required>
+            <option value="">Choose one</option>
+          </select></label>
+
+        <div id="unitModeBox" style="display:none; margin-top:14px">
+          <label style="margin-top:0">Desired Unit *</label>
+          <div class="choices" style="flex-direction:column">
+            <label><input type="radio" name="unitMode" value="list"> Choose from our listing units</label>
+            <label><input type="radio" name="unitMode" value="specify"> Specify the unit desired</label>
+          </div>
+        </div>
+
+        <div id="unitListBox" style="display:none">
+          <label>Select Unit *
+            <select id="unitSelect"><option value="">Choose one</option></select></label>
+          <label>Model *
+            <select name="model" id="modelSelect"><option value="">Choose one</option></select></label>
+          <p class="hint">Please note that unit availability may vary by branch and is subject to change. For the latest availability, kindly contact your selected K Riders branch directly before visiting.</p>
+        </div>
+        <div id="unitSpecifyBox" style="display:none">
+          <label>Desired Unit *
+            <input id="unitInput" placeholder="Type the unit you want"></label>
+        </div>
+
+        <label>Color *<input name="color" id="color" required></label>
+        <label>Downpayment *
+          <input name="dp" id="dp" type="number" min="0" step="0.01" inputmode="decimal" required></label>
+        <label>Term *
+          <select name="term" id="term" required>
+            <option value="">Choose one</option>
+            <option>30 days</option>
+            <option>60 days</option>
+            <option>90 days</option>
+            <option>6 months</option>
+            <option>12 months</option>
+            <option>18 months</option>
+            <option>24 months</option>
+            <option>36 months</option>
+          </select></label>
+
+        <div id="quoteBox">
+          <div style="font-weight:bold">Estimated Monthly Amortization</div>
+          <div id="quoteValue">Choose a unit, model, downpayment and term.</div>
+          <p class="hint" style="margin-top:8px">All calculated amounts are indicative and may be subject to change depending on the submitted and verified application information and documents.</p>
+        </div>
+
+        <label>Expected Date of Release *<input type="date" name="releaseDate" id="releaseDate" required></label>
+        <p class="hint">Choose a date from today up to 3 months ahead.</p>
+        <label>First Due Date *
+          <select name="firstDue" id="firstDue" required>
+            <option value="">Choose the release date first</option>
+          </select></label>
+
+        <div id="termsArea"></div>
+        <button type="submit" id="sendButton">Submit application</button>
+      </fieldset>
+    </form>
+    <p id="msg"></p>
+    <div id="contactBox" style="font-size:14px; margin-top:10px"></div>
+  </div>
+</div>
+
+<script src="terms.js"></script>
+<script>
+  var GOOGLE_CLIENT_ID = '540530581718-307joed6m8omvlbgu6ppki2ciuetppt1.apps.googleusercontent.com';
+  var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2DJAqRCxGUImWey5Wt45abTIp52M-027sGKFq4YCXETtTylx-OSTQuTmYrK-LBiOw/exec';
+
+  var inquiryId = new URLSearchParams(location.search).get('inquiry') || '';
+  var idToken = '';
+  var catalog = {};        // { brand: { unit: [model, ...] } } galing sa pricelist (walang presyo)
+  var branchList = [];     // galing sa Branch Contacts tab
+  var appOk = false;       // bubukas ang form kapag tama ang inquiry
+  var busyCalc = false;    // naka-lock ang form habang kinakalkula
+  var quoteOk = false;     // may tamang quote na ang napiling unit at term
+
+  var INCOME_FIELDS = [['incSalary', 'Income'], ['incCommission', 'Commission'], ['incProfFee', 'Professional Fee'],
+    ['incBusiness', 'Business (NOT)'], ['incOther', 'Other'], ['incSpouse', 'Spouse Income']];
+  var EXPENSE_FIELDS = [['expLiving', 'Living'], ['expRental', 'Rental'], ['expEducation', 'Education'],
+    ['expTransport', 'Transportation'], ['expAmort', 'Amortization']];
+
+  function el(id) { return document.getElementById(id); }
+  function checked(name) {
+    var r = document.querySelector('input[name="' + name + '"]:checked');
+    return r ? r.value : '';
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function isoLocal(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function peso(n) { return '\u20B1' + Number(n).toLocaleString('en-US'); }
+  function pesoDecimal(n) {
+    return (n < 0 ? '-' : '') + '\u20B1' +
+      Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function prettyDate(iso) {
+    var p = iso.split('-').map(Number);
+    return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+  function showTop(text, isError) {
+    var box = el('checkMsg');
+    box.textContent = text;
+    box.className = isError ? 'error' : 'success';
+  }
+  function showMessage(text, isError) {
+    var box = el('msg');
+    box.textContent = text;
+    box.className = isError ? 'error' : 'success';
+  }
+  async function post(body) {
+    var res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    });
+    return res.json();
+  }
+
+  // Bubukas lang ang form kapag tama ang inquiry; naka-lock habang kinakalkula
+  function updateForm() {
+    el('fields').disabled = !(appOk && !busyCalc);
+    el('signInOverlay').style.display = appOk ? 'none' : 'block';
+  }
+  el('signInOverlay').addEventListener('click', function () {
+    if (idToken) return; // may ibang mensahe na kung naka-sign in
+    el('googleButton').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showTop('Please sign in with your Google account above to continue.', true);
+  });
+
+  // ===== Mga petsa =====
+  // Mga puwedeng First Due Date ayon sa petsa ng release (kapareho ng nasa server)
+  function firstDueOptions(iso) {
+    var p = iso.split('-').map(Number);
+    var day = p[2];
+    var rules;
+    if (day <= 5) rules = [[1, 6], [1, 11]];
+    else if (day <= 10) rules = [[1, 11], [1, 16]];
+    else if (day <= 15) rules = [[1, 16], [1, 21]];
+    else if (day <= 20) rules = [[1, 21], [1, 26]];
+    else if (day <= 25) rules = [[1, 26], [2, 6]];
+    else rules = [[2, 6], [2, 11]];
+    return rules.map(function (r) { return isoLocal(new Date(p[0], p[1] - 1 + r[0], r[1])); });
+  }
+
+  function updateFirstDue() {
+    var release = el('releaseDate').value;
+    var select = el('firstDue');
+    var current = select.value;
+    select.innerHTML = '<option value="">' + (release ? 'Choose one' : 'Choose the release date first') + '</option>';
+    if (!release) return;
+    var options = firstDueOptions(release);
+    options.forEach(function (iso) {
+      var option = document.createElement('option');
+      option.value = iso;
+      option.textContent = prettyDate(iso);
+      select.appendChild(option);
+    });
+    if (options.indexOf(current) !== -1) select.value = current;
+  }
+
+  var today = new Date();
+  var threeMonths = new Date();
+  threeMonths.setMonth(threeMonths.getMonth() + 3);
+  var eighteen = new Date();
+  eighteen.setFullYear(eighteen.getFullYear() - 18);
+  el('releaseDate').min = isoLocal(today);
+  el('releaseDate').max = isoLocal(threeMonths);
+  el('dob').max = isoLocal(eighteen);
+  el('cmDob').max = isoLocal(eighteen);
+  el('releaseDate').addEventListener('change', updateFirstDue);
+
+  // ===== Income at expenses =====
+  function buildMoney(containerId, fields) {
+    var box = el(containerId);
+    fields.forEach(function (f) {
+      var label = document.createElement('label');
+      label.textContent = f[1];
+      var input = document.createElement('input');
+      input.name = f[0];
+      input.type = 'number';
+      input.min = '0';
+      input.step = '0.01';
+      input.inputMode = 'decimal';
+      input.placeholder = '0';
+      input.addEventListener('input', updateTotals);
+      label.appendChild(input);
+      box.appendChild(label);
+    });
+  }
+  function sumOf(fields) {
+    return fields.reduce(function (total, f) {
+      return total + (parseFloat(document.querySelector('[name="' + f[0] + '"]').value) || 0);
+    }, 0);
+  }
+  function updateTotals() {
+    var income = sumOf(INCOME_FIELDS);
+    var expense = sumOf(EXPENSE_FIELDS);
+    el('totalIncome').value = pesoDecimal(income);
+    el('totalExpense').value = pesoDecimal(expense);
+    el('netIncome').value = pesoDecimal(income - expense);
+  }
+  buildMoney('incomeFields', INCOME_FIELDS);
+  buildMoney('expenseFields', EXPENSE_FIELDS);
+  updateTotals();
+
+  // "Others" (specify)
+  function bindOther(group, otherId) {
+    var other = el(otherId);
+    document.querySelectorAll('input[name="' + group + '"]').forEach(function (r) {
+      r.addEventListener('change', function () {
+        var show = checked(group) === 'Others';
+        other.style.display = show ? 'block' : 'none';
+        other.required = show;
+        if (!show) other.value = '';
+      });
+    });
+  }
+  bindOther('civilStatus', 'civilOther');
+  bindOther('incomeSource', 'incomeOther');
+  bindOther('cmIncomeSource', 'cmIncomeOther');
+
+  // ===== Brand, unit, at model =====
+  function addOption(select, value) {
+    var option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    select.appendChild(option);
+  }
+
+  async function loadCatalog() {
+    try {
+      var res = await fetch(SCRIPT_URL + '?action=catalog');
+      var result = await res.json();
+      catalog = result.catalog || {};
+      branchList = result.branches || [];
+    } catch (err) {
+      showTop('Could not load the form. Check your connection and refresh the page.', true);
+      throw err;
+    }
+    Object.keys(catalog).forEach(function (brand) { addOption(el('brandSelect'), brand); });
+  }
+  var catalogPromise = loadCatalog();
+  catalogPromise.catch(function () {});
+
+  function onBrandChange() {
+    var brand = el('brandSelect').value;
+    document.querySelectorAll('input[name="unitMode"]').forEach(function (r) { r.checked = false; });
+    el('unitSelect').innerHTML = '<option value="">Choose one</option>';
+    el('modelSelect').innerHTML = '<option value="">Choose one</option>';
+    el('unitInput').value = '';
+    if (brand && Object.prototype.hasOwnProperty.call(catalog, brand)) {
+      Object.keys(catalog[brand]).forEach(function (unit) { addOption(el('unitSelect'), unit); });
+    }
+    el('unitModeBox').style.display = brand ? 'block' : 'none';
+    onUnitModeChange();
+  }
+
+  function onUnitModeChange() {
+    var mode = checked('unitMode');
+    el('unitListBox').style.display = mode === 'list' ? 'block' : 'none';
+    el('unitSpecifyBox').style.display = mode === 'specify' ? 'block' : 'none';
+    el('unitSelect').required = mode === 'list';
+    el('modelSelect').required = mode === 'list';
+    el('unitInput').required = mode === 'specify';
+  }
+
+  function onUnitChange() {
+    var brand = el('brandSelect').value;
+    var unit = el('unitSelect').value;
+    var select = el('modelSelect');
+    select.innerHTML = '<option value="">Choose one</option>';
+    var models = (catalog[brand] && Object.prototype.hasOwnProperty.call(catalog[brand], unit)) ? catalog[brand][unit] : [];
+    models.forEach(function (m) { addOption(select, m); });
+    if (models.length === 1) select.value = models[0];
+  }
+
+  // ===== Quote ng Monthly Amortization (kinakalkula sa server) =====
+  function showQuote(text, isError) {
+    var box = el('quoteValue');
+    box.textContent = text;
+    box.style.color = isError ? '#b91c1c' : '#0f2540';
+    box.style.fontSize = text.length > 24 ? '14px' : '20px';
+  }
+
+  async function quoteNow() {
+    quoteOk = false;
+    var mode = checked('unitMode');
+    if (mode === 'specify') { showQuote('Our staff will compute for you.', false); return; }
+    var brand = el('brandSelect').value;
+    var unit = el('unitSelect').value;
+    var model = el('modelSelect').value;
+    var dp = el('dp').value;
+    var term = el('term').value;
+    if (mode !== 'list' || !brand || !unit || !model || dp === '' || !term) {
+      showQuote('Choose a unit, model, downpayment and term.', false);
+      return;
+    }
+    busyCalc = true;
+    updateForm();
+    showQuote('Calculating...', false);
+    var result;
+    try {
+      result = await post({ action: 'quote', idToken: idToken, brand: brand, unit: unit, model: model, dp: dp, term: term });
+    } catch (err) {
+      result = { ok: false, message: 'Could not calculate. Check your connection and try again.' };
+    }
+    busyCalc = false;
+    updateForm();
+    if (!result.ok) { showQuote(result.message, true); return; }
+    quoteOk = true;
+    showQuote(peso(result.low) + ' - ' + peso(result.high), false);
+  }
+
+  el('brandSelect').addEventListener('change', function () { onBrandChange(); quoteNow(); });
+  document.querySelectorAll('input[name="unitMode"]').forEach(function (r) {
+    r.addEventListener('change', function () { onUnitModeChange(); quoteNow(); });
+  });
+  el('unitSelect').addEventListener('change', function () { onUnitChange(); quoteNow(); });
+  el('modelSelect').addEventListener('change', quoteNow);
+  el('dp').addEventListener('change', quoteNow);
+  el('term').addEventListener('change', quoteNow);
+
+  // ===== Pag-sign in at pag-check ng inquiry =====
+  function prefill(p) {
+    el('pLast').value = p.lastName;
+    el('pFirst').value = p.firstName;
+    el('pMiddle').value = p.middleName;
+    el('pSuffix').value = p.suffix;
+    el('pEmail').value = p.email;
+    el('pPhone').value = p.contact;
+    el('color').value = p.color;
+    var brandSelect = el('brandSelect');
+    brandSelect.value = p.brand;
+    if (brandSelect.value !== p.brand) brandSelect.value = '';
+    onBrandChange();
+    if (!brandSelect.value) return;
+    var inList = Object.prototype.hasOwnProperty.call(catalog[p.brand] || {}, p.unit);
+    document.querySelector('input[name="unitMode"][value="' + (inList ? 'list' : 'specify') + '"]').checked = true;
+    onUnitModeChange();
+    if (inList) {
+      el('unitSelect').value = p.unit;
+      onUnitChange();
+    } else {
+      el('unitInput').value = p.unit;
+    }
+  }
+
+  async function startApplication() {
+    if (!inquiryId) {
+      showTop('Invalid link. Please open the application from the inquiry page.', true);
+      return;
+    }
+    showTop('Checking your inquiry...', false);
+    var result;
+    try {
+      await catalogPromise;
+      result = await post({ action: 'appInit', idToken: idToken, inquiryId: inquiryId, payment: 'Installment' });
+    } catch (err) {
+      showTop('Could not check your inquiry. Check your connection and refresh the page.', true);
+      return;
+    }
+    if (!result.ok) { showTop(result.message, true); return; }
+    showTop('', false);
+    prefill(result.prefill);
+    appOk = true;
+    updateForm();
+    quoteNow();
+  }
+
+  function onGoogleLogin(response) {
+    idToken = response.credential;
+    var payload = JSON.parse(atob(idToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    el('who').textContent = 'Signed in as ' + payload.email;
+    startApplication();
+  }
+
+  function initGoogle() {
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleLogin });
+    google.accounts.id.renderButton(el('googleButton'), { theme: 'outline', size: 'large' });
+  }
+
+  // ===== Contact ng branch pagkatapos mag-submit =====
+  function showContact(branchName) {
+    var box = el('contactBox');
+    box.textContent = '';
+    var found = branchList.filter(function (b) { return b.branch === branchName; })[0];
+    if (!found) return;
+    var heading = document.createElement('div');
+    heading.textContent = 'Or contact us:';
+    var line = document.createElement('div');
+    line.style.marginTop = '6px';
+    line.appendChild(document.createTextNode(found.branch + ' - '));
+    if (found.contact) {
+      var phone = document.createElement('a');
+      phone.href = 'tel:' + found.contact.replace(/[^0-9+]/g, '');
+      phone.textContent = found.contact;
+      line.appendChild(phone);
+    }
+    if (found.link) {
+      line.appendChild(document.createTextNode(' - '));
+      var fb = document.createElement('a');
+      fb.href = found.link;
+      fb.target = '_blank';
+      fb.rel = 'noopener';
+      fb.textContent = 'Facebook Page';
+      line.appendChild(fb);
+    }
+    box.appendChild(heading);
+    box.appendChild(line);
+  }
+
+  // ===== Pagsumite =====
+  async function submitForm(event) {
+    event.preventDefault();
+    var data = Object.fromEntries(new FormData(event.target));
+    var mode = checked('unitMode');
+    if (!mode) { showMessage('Please choose how you want to select the unit.', true); return; }
+    data.unitMode = mode;
+    data.unit = mode === 'specify' ? el('unitInput').value.trim() : el('unitSelect').value;
+    if (mode === 'list' && !quoteOk) {
+      showMessage('Please check your downpayment and term.', true);
+      return;
+    }
+    if (!Terms.isAccepted()) {
+      showMessage('Please read and accept the Terms & Conditions to send your application.', true);
+      Terms.requireAcceptance();
+      return;
+    }
+    data.consent = true;
+    data.action = 'application';
+    data.idToken = idToken;
+    data.inquiryId = inquiryId;
+    var button = el('sendButton');
+    button.disabled = true;
+    showMessage('Sending...', false);
+    try {
+      var result = await post(data);
+      if (result.ok) {
+        el('appForm').style.display = 'none';
+        showMessage('Thank you! Your application was submitted. We will contact you soon.', false);
+        showContact(result.branch);
+      } else {
+        showMessage(result.message, true);
+        button.disabled = false;
+      }
+    } catch (err) {
+      showMessage('Could not send. Check your connection and try again.', true);
+      button.disabled = false;
+    }
+  }
+
+  Terms.init('termsArea');
+  updateForm();
+</script>
+<script src="https://accounts.google.com/gsi/client" async defer onload="initGoogle()"></script>
+</body>
+</html>
