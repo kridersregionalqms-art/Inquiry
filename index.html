@@ -57,7 +57,7 @@
             <input type="radio" name="unitChoice" value="list" id="unitChoiceList" style="width:auto; margin:0">
             Choose from our listing units
           </label>
-          <small style="display:block; color:#64748b; margin:2px 0 0 24px">
+                    <small id="listUnitNote" style="display:none; color:#64748b; margin:2px 0 0 24px">
             Please note that unit availability may vary by branch and is subject to change. For the latest availability, kindly contact your selected K Riders branch directly before visiting. Thank you!
           </small>
           <label style="font-weight:normal; display:flex; align-items:center; gap:6px; margin-top:6px">
@@ -341,14 +341,16 @@
     var unitSelect = document.getElementById('unitSelect');
     var unitInput = document.getElementById('unitInput');
 
-    document.getElementById('unitListPicker').style.display = 'none';
+        document.getElementById('unitListPicker').style.display = 'none';
     document.getElementById('unitSpecify').style.display = 'none';
+    document.getElementById('listUnitNote').style.display = 'none';
     unitSelect.required = false;
     unitInput.required = false;
 
     if (!choice) return;
     if (choice.value === 'list') {
       document.getElementById('unitListPicker').style.display = 'block';
+      document.getElementById('listUnitNote').style.display = 'block';
       unitSelect.required = true;
     } else {
       document.getElementById('unitSpecify').style.display = 'block';
