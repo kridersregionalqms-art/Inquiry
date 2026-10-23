@@ -178,6 +178,7 @@
 </div>
 
 <script src="terms.js"></script>
+<script src="spinner.js"></script>
 <script>
   var GOOGLE_CLIENT_ID = '540530581718-307joed6m8omvlbgu6ppki2ciuetppt1.apps.googleusercontent.com';
   var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2DJAqRCxGUImWey5Wt45abTIp52M-027sGKFq4YCXETtTylx-OSTQuTmYrK-LBiOw/exec';
@@ -460,6 +461,15 @@
   }
 
   async function startApplication() {
+    Busy.start('Checking your inquiry...');
+    try {
+      await startApplicationWork();
+    } finally {
+      Busy.stop();
+    }
+  }
+
+  async function startApplicationWork() {
     if (!inquiryId) {
       showTop('Invalid link. Please open the application from the inquiry page.', true);
       return;
@@ -547,6 +557,7 @@
     var button = el('sendButton');
     button.disabled = true;
     showMessage('Sending...', false);
+        Busy.start('Submitting your application...');
     try {
       var result = await post(data);
       if (result.ok) {
@@ -560,6 +571,8 @@
     } catch (err) {
       showMessage('Could not send. Check your connection and try again.', true);
       button.disabled = false;
+    } finally {
+      Busy.stop();
     }
   }
 
