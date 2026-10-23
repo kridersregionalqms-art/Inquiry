@@ -15,7 +15,9 @@
   input, select, textarea { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 10px;
     border: 1px solid #94a3b8; border-radius: 6px; font-size: 16px; font-family: inherit; }
   input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px solid #2563eb; }
-  fieldset { border: 0; padding: 0; margin: 0; }
+   fieldset { border: 0; padding: 0; margin: 0; }
+  #inquiryForm { position: relative; }
+  #signInOverlay { position: absolute; inset: 0; z-index: 5; cursor: pointer; background: transparent; }
   button { width: 100%; margin-top: 20px; padding: 12px; border: 0; border-radius: 6px;
     background: #2563eb; color: #fff; font-size: 16px; font-weight: bold; }
   button:disabled { background: #94a3b8; }
@@ -37,7 +39,8 @@
     <p id="checkMsg" style="font-size:14px; font-weight:bold; margin:10px 0 0"></p>
     <div id="activeBox"></div>
 
-    <form id="inquiryForm" onsubmit="submitForm(event)">
+        <form id="inquiryForm" onsubmit="submitForm(event)">
+      <div id="signInOverlay"></div>
       <fieldset id="fields" disabled>
         <label>Last Name *<input name="lastName" required></label>
         <label>First Name *<input name="firstName" required></label>
@@ -112,9 +115,18 @@
   var brandUnits = {};         // { brand: [unit, unit, ...] }, galing sa pricelist spreadsheet
 
   // Bubukas lang ang form kapag tama ang link, nakuha na ang branches, at naka-sign in na
-  function updateForm() {
-    document.getElementById('fields').disabled = !(linkOk && branchesReady && signedIn);
+    function updateForm() {
+    var ready = linkOk && branchesReady && signedIn;
+    document.getElementById('fields').disabled = !ready;
+    document.getElementById('signInOverlay').style.display = ready ? 'none' : 'block';
   }
+
+  // Pag-click sa mga naka-disable na fields, ituturo kay customer na mag-sign in muna
+  document.getElementById('signInOverlay').addEventListener('click', function () {
+    if (!linkOk || !branchesReady) return; // may ibang message na ang mga ito (invalid link / loading)
+    document.getElementById('googleButton').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showTopMessage('Please sign in with your Google account above to continue.', true);
+  });
 
   // Kinukuha ang listahan ng branches at contacts mula sa Google Sheet
   async function loadBranches() {
