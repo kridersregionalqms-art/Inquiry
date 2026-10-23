@@ -91,6 +91,7 @@
         <label>Note<textarea name="note" rows="3"></textarea></label>
         <div id="termsArea"></div>
         <button type="submit" id="sendButton">Send inquiry</button>
+        <button type="button" id="cancelEditButton" style="display:none; background:#475569">Cancel</button>
       </fieldset>
     </form>
     <p id="msg"></p>
@@ -170,6 +171,7 @@
         document.getElementById('branchPicker').style.display = 'none';
         document.getElementById('branchFixed').style.display = 'block';
         document.getElementById('branchFixedText').value = found.branch;
+        linkBranch = found.branch;
       } else {
         linkOk = false;
         showMessage('Invalid link. Please scan the QR code again.', true);
@@ -241,16 +243,20 @@
       return;
     }
     showTopMessage('', false);
+    var expiredList = result.expired || [];
     if (result.inquiries && result.inquiries.length) {
-      showActiveInquiries(result.inquiries);
+      showActiveInquiries(result.inquiries, expiredList);
       return;
     }
+    document.getElementById('activeBox').textContent = '';
+    document.getElementById('inquiryForm').style.display = '';
+    showExpiredInquiries(expiredList);
     signedIn = true;
     updateForm();
   }
 
   // Ipinapakita ang mga aktibong inquiry, may Proceed to application at Inquire another
-  function showActiveInquiries(list) {
+  function showActiveInquiries(list, expiredList) {
     document.getElementById('inquiryForm').style.display = 'none';
     var box = document.getElementById('activeBox');
     box.textContent = '';
@@ -276,6 +282,12 @@
       go.textContent = 'Already inquired? Proceed to application';
       go.style.cssText = 'display:block; margin-top:10px; padding:10px; border-radius:6px; background:#2563eb; color:#fff; text-align:center; font-weight:bold; text-decoration:none';
       item.appendChild(go);
+      var edit = document.createElement('button');
+      edit.type = 'button';
+      edit.textContent = 'Edit my inquiry';
+      edit.style.cssText = 'margin-top:8px; background:#fff; color:#2563eb; border:1px solid #2563eb';
+      edit.onclick = function () { startEdit(q); };
+      item.appendChild(edit);
       box.appendChild(item);
     });
     var another = document.createElement('button');
@@ -290,6 +302,137 @@
       updateForm();
     };
     box.appendChild(another);
+    showExpiredInquiries(expiredList);
+  }
+
+  var editingId = '';   // Inquiry ID na ine-edit (walang laman kung bagong inquiry)
+  var linkBranch = '';  // branch na naka-lock ng walk-in link
+
+  // Branch field: kung may lockedBranch, read-only ito; kung wala, dropdown
+  function setBranchMode(lockedBranch) {
+    var picker = document.querySelector('select[name="branch"]');
+    picker.required = !lockedBranch;
+    picker.disabled = !!lockedBranch;
+    document.getElementById('branchPicker').style.display = lockedBranch ? 'none' : 'block';
+    document.getElementById('branchFixed').style.display = lockedBranch ? 'block' : 'none';
+    document.getElementById('branchFixedText').value = lockedBranch || '';
+  }
+
+  // Binubuksan ang form na may laman na ang inquiry para ma-edit
+  function startEdit(q) {
+    editingId = q.id;
+    var form = document.getElementById('inquiryForm');
+    form.reset();
+    var f = form.elements;
+    f['lastName'].value = q.lastName;
+    f['firstName'].value = q.firstName;
+    f['middleName'].value = q.middleName;
+    f['suffix'].value = q.suffix;
+    f['contact'].value = q.contact;
+    f['color'].value = q.color;
+    f['note'].value = q.note;
+
+    var brandSelect = document.getElementById('brandSelect');
+    brandSelect.value = q.brand;
+    if (brandSelect.value !== q.brand) brandSelect.value = ''; // wala na sa listahan, pipili ulit
+    onBrandChange();
+    if (brandSelect.value) {
+      var inList = (brandUnits[q.brand] || []).indexOf(q.unit) !== -1;
+      document.getElementById(inList ? 'unitChoiceList' : 'unitChoiceSpecify').checked = true;
+      onUnitChoiceChange();
+      if (inList) document.getElementById('unitSelect').value = q.unit;
+      else document.getElementById('unitInput').value = q.unit;
+    }
+
+    f['payment'].value = q.payment;
+    f['payment'].disabled = true; // hindi puwedeng baguhin
+    setBranchMode(q.branchLocked ? q.branch : '');
+    if (!q.branchLocked) f['branch'].value = q.branch;
+
+    document.getElementById('termsArea').style.display = 'none';
+    document.getElementById('sendButton').textContent = 'Save changes';
+    document.getElementById('cancelEditButton').style.display = 'block';
+    document.getElementById('activeBox').style.display = 'none';
+    form.style.display = '';
+    showMessage('', false);
+    signedIn = true;
+    updateForm();
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Ibinabalik sa normal ang form pagkatapos mag-edit (save o cancel)
+  function endEdit() {
+    editingId = '';
+    var form = document.getElementById('inquiryForm');
+    form.reset();
+    form.elements['payment'].disabled = false;
+    setBranchMode(linkBranch);
+    onBrandChange();
+    Terms.init('termsArea');
+    document.getElementById('termsArea').style.display = '';
+    document.getElementById('sendButton').textContent = 'Send inquiry';
+    document.getElementById('cancelEditButton').style.display = 'none';
+    document.getElementById('activeBox').style.display = '';
+  }
+
+  document.getElementById('cancelEditButton').addEventListener('click', function () {
+    endEdit();
+    checkInquiries();
+  });
+
+  // Mga expired na inquiry: puwedeng burahin ni customer
+  function showExpiredInquiries(list) {
+    if (!list || !list.length) return;
+    var box = document.getElementById('activeBox');
+    var wrap = document.createElement('div');
+    wrap.style.marginTop = '16px';
+    var intro = document.createElement('p');
+    intro.style.cssText = 'font-weight:bold; font-size:14px; margin:0';
+    intro.textContent = 'Expired inquiries';
+    wrap.appendChild(intro);
+    list.forEach(function (q) {
+      var item = document.createElement('div');
+      item.style.cssText = 'border:1px solid #cbd5e1; border-radius:6px; padding:10px; margin-top:10px; font-size:14px; color:#475569';
+      var title = document.createElement('div');
+      title.textContent = q.brand + ' ' + q.unit + ' - ' + q.color + ' (' + q.payment + ')';
+      var meta = document.createElement('div');
+      meta.textContent = q.branch + ' | Expired ' +
+        new Date(q.expires).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.textContent = 'Delete this inquiry';
+      del.style.cssText = 'margin-top:8px; background:#b91c1c';
+      del.onclick = function () { deleteInquiry(q.id, del); };
+      item.appendChild(title);
+      item.appendChild(meta);
+      item.appendChild(del);
+      wrap.appendChild(item);
+    });
+    box.appendChild(wrap);
+  }
+
+  async function deleteInquiry(inquiryId, button) {
+    if (!confirm('Delete this inquiry? Your information for this inquiry will be removed and this cannot be undone.')) return;
+    button.disabled = true;
+    try {
+      var res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'delete', idToken: idToken, inquiryId: inquiryId })
+      });
+      var result = await res.json();
+      if (!result.ok) {
+        showTopMessage(result.message, true);
+        button.disabled = false;
+        return;
+      }
+    } catch (err) {
+      showTopMessage('Could not delete. Check your connection and try again.', true);
+      button.disabled = false;
+      return;
+    }
+    await checkInquiries();
+    showTopMessage('Your inquiry was deleted.', false);
   }
 
   // Ipinapakita ang contact ng branch pagkatapos mag-submit
@@ -413,12 +556,16 @@
 	data.ref = ref;
     data.src = src;
 	  data.another = wantsAnother;
-    if (!Terms.isAccepted()) {
+    if (editingId) {
+      data.action = 'edit';
+      data.inquiryId = editingId;
+    } else if (!Terms.isAccepted()) {
       showMessage('Please read and accept the Terms & Conditions to send your inquiry.', true);
       Terms.requireAcceptance();
       return;
+    } else {
+      data.consent = true;
     }
-    data.consent = true;
     var button = document.getElementById('sendButton');
     button.disabled = true;
     showMessage('Sending...', false);
@@ -430,6 +577,14 @@
         body: JSON.stringify(data)
       });
       var result = await res.json();
+      if (result.ok && editingId) {
+        endEdit();
+        button.disabled = false;
+        showMessage('', false);
+        await checkInquiries();
+        showTopMessage('Your inquiry was updated.', false);
+        return;
+      }
       if (result.ok) {
         document.getElementById('inquiryForm').style.display = 'none';
         showMessage('Thank you! Your inquiry was sent. We will contact you soon.', false);
