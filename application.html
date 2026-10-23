@@ -114,32 +114,12 @@
         <label>Net Income<input id="netIncome" readonly></label>
 
         <h2>Installment Term</h2>
-        <label>Brand *
-          <select name="brand" id="brandSelect" required>
-            <option value="">Choose one</option>
-          </select></label>
-
-        <div id="unitModeBox" style="display:none; margin-top:14px">
-          <label style="margin-top:0">Desired Unit *</label>
-          <div class="choices" style="flex-direction:column">
-            <label><input type="radio" name="unitMode" value="list"> Choose from our listing units</label>
-            <label><input type="radio" name="unitMode" value="specify"> Specify the unit desired</label>
-          </div>
-        </div>
-
-        <div id="unitListBox" style="display:none">
-          <label>Select Unit *
-            <select id="unitSelect"><option value="">Choose one</option></select></label>
-          <label>Model *
-            <select name="model" id="modelSelect"><option value="">Choose one</option></select></label>
-          <p class="hint">Please note that unit availability may vary by branch and is subject to change. For the latest availability, kindly contact your selected K Riders branch directly before visiting.</p>
-        </div>
-        <div id="unitSpecifyBox" style="display:none">
-          <label>Desired Unit *
-            <input id="unitInput" placeholder="Type the unit you want"></label>
-        </div>
-
-        <label>Color *<input name="color" id="color" required></label>
+        <label>Brand<input name="brand" id="pBrand" readonly></label>
+        <label>Unit<input id="pUnit" readonly></label>
+        <label>Model<input name="model" id="pModel" readonly></label>
+        <label>Color<input name="color" id="color" readonly></label>
+        <p class="hint">To change the brand, unit, model or color, please edit your inquiry on the inquiry page.</p>
+        <p class="hint">Please note that unit availability may vary by branch and is subject to change. For the latest availability, kindly contact your selected K Riders branch directly before visiting.</p>
         <label>Downpayment *
           <input name="dp" id="dp" type="number" min="0" step="0.01" inputmode="decimal" required></label>
         <label>Term *
@@ -334,14 +314,7 @@
   bindOther('incomeSource', 'incomeOther');
   bindOther('cmIncomeSource', 'cmIncomeOther');
 
-  // ===== Brand, unit, at model =====
-  function addOption(select, value) {
-    var option = document.createElement('option');
-    option.value = value;
-    option.textContent = value;
-    select.appendChild(option);
-  }
-
+  // ===== Catalog =====
   async function loadCatalog() {
     try {
       var res = await fetch(SCRIPT_URL + '?action=catalog');
@@ -352,42 +325,9 @@
       showTop('Could not load the form. Check your connection and refresh the page.', true);
       throw err;
     }
-    Object.keys(catalog).forEach(function (brand) { addOption(el('brandSelect'), brand); });
   }
   var catalogPromise = loadCatalog();
   catalogPromise.catch(function () {});
-
-  function onBrandChange() {
-    var brand = el('brandSelect').value;
-    document.querySelectorAll('input[name="unitMode"]').forEach(function (r) { r.checked = false; });
-    el('unitSelect').innerHTML = '<option value="">Choose one</option>';
-    el('modelSelect').innerHTML = '<option value="">Choose one</option>';
-    el('unitInput').value = '';
-    if (brand && Object.prototype.hasOwnProperty.call(catalog, brand)) {
-      Object.keys(catalog[brand]).forEach(function (unit) { addOption(el('unitSelect'), unit); });
-    }
-    el('unitModeBox').style.display = brand ? 'block' : 'none';
-    onUnitModeChange();
-  }
-
-  function onUnitModeChange() {
-    var mode = checked('unitMode');
-    el('unitListBox').style.display = mode === 'list' ? 'block' : 'none';
-    el('unitSpecifyBox').style.display = mode === 'specify' ? 'block' : 'none';
-    el('unitSelect').required = mode === 'list';
-    el('modelSelect').required = mode === 'list';
-    el('unitInput').required = mode === 'specify';
-  }
-
-  function onUnitChange() {
-    var brand = el('brandSelect').value;
-    var unit = el('unitSelect').value;
-    var select = el('modelSelect');
-    select.innerHTML = '<option value="">Choose one</option>';
-    var models = (catalog[brand] && Object.prototype.hasOwnProperty.call(catalog[brand], unit)) ? catalog[brand][unit] : [];
-    models.forEach(function (m) { addOption(select, m); });
-    if (models.length === 1) select.value = models[0];
-  }
 
   // ===== Quote ng Monthly Amortization (kinakalkula sa server) =====
   function showQuote(text, isError) {
@@ -399,14 +339,13 @@
 
   async function quoteNow() {
     quoteOk = false;
-    var mode = checked('unitMode');
-    if (mode === 'specify') { showQuote('Our staff will compute for you.', false); return; }
-    var brand = el('brandSelect').value;
-    var unit = el('unitSelect').value;
-    var model = el('modelSelect').value;
+    if (unitMode === 'specify') { showQuote('Our staff will compute for you.', false); return; }
+    var brand = el('pBrand').value;
+    var unit = el('pUnit').value;
+    var model = el('pModel').value;
     var dp = el('dp').value;
     var term = el('term').value;
-    if (mode !== 'list' || !brand || !unit || !model || dp === '' || !term) {
+    if (unitMode !== 'list' || !brand || !unit || !model || dp === '' || !term) {
       showQuote('Choose a unit, model, downpayment and term.', false);
       return;
     }
@@ -426,12 +365,7 @@
     showQuote(peso(result.low) + ' - ' + peso(result.high), false);
   }
 
-  el('brandSelect').addEventListener('change', function () { onBrandChange(); quoteNow(); });
-  document.querySelectorAll('input[name="unitMode"]').forEach(function (r) {
-    r.addEventListener('change', function () { onUnitModeChange(); quoteNow(); });
-  });
-  el('unitSelect').addEventListener('change', function () { onUnitChange(); quoteNow(); });
-  el('modelSelect').addEventListener('change', quoteNow);
+  var unitMode = ''; // 'list' kung nasa listing ang unit ng inquiry, 'specify' kung hindi
   el('dp').addEventListener('change', quoteNow);
   el('term').addEventListener('change', quoteNow);
 
@@ -444,20 +378,11 @@
     el('pEmail').value = p.email;
     el('pPhone').value = p.contact;
     el('color').value = p.color;
-    var brandSelect = el('brandSelect');
-    brandSelect.value = p.brand;
-    if (brandSelect.value !== p.brand) brandSelect.value = '';
-    onBrandChange();
-    if (!brandSelect.value) return;
+    el('pBrand').value = p.brand || '';
+    el('pUnit').value = p.unit || '';
+    el('pModel').value = p.model || '';
     var inList = Object.prototype.hasOwnProperty.call(catalog[p.brand] || {}, p.unit);
-    document.querySelector('input[name="unitMode"][value="' + (inList ? 'list' : 'specify') + '"]').checked = true;
-    onUnitModeChange();
-    if (inList) {
-      el('unitSelect').value = p.unit;
-      onUnitChange();
-    } else {
-      el('unitInput').value = p.unit;
-    }
+    unitMode = (inList && p.model) ? 'list' : 'specify';
   }
 
   async function startApplication() {
@@ -537,11 +462,9 @@
   async function submitForm(event) {
     event.preventDefault();
     var data = Object.fromEntries(new FormData(event.target));
-    var mode = checked('unitMode');
-    if (!mode) { showMessage('Please choose how you want to select the unit.', true); return; }
-    data.unitMode = mode;
-    data.unit = mode === 'specify' ? el('unitInput').value.trim() : el('unitSelect').value;
-    if (mode === 'list' && !quoteOk) {
+    data.unitMode = unitMode;
+    data.unit = el('pUnit').value;
+    if (unitMode === 'list' && !quoteOk) {
       showMessage('Please check your downpayment and term.', true);
       return;
     }
