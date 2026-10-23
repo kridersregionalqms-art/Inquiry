@@ -46,8 +46,29 @@
         <label>Contact Number *
           <input name="contact" type="tel" inputmode="numeric" maxlength="11" pattern="09[0-9]{9}"
                  placeholder="09XXXXXXXXX" required></label>
-        <label>Brand *<input name="brand" required></label>
-        <label>Desired Unit *<input name="unit" required></label>
+                <label>Brand *
+          <select name="brand" id="brandSelect" required>
+            <option value="">Choose one</option>
+          </select></label>
+
+        <div id="unitChoiceBox" style="display:none; margin-top:14px">
+          <label style="margin-top:0">Desired Unit *</label>
+          <label style="font-weight:normal; display:flex; align-items:center; gap:6px; margin-top:8px">
+            <input type="radio" name="unitChoice" value="list" id="unitChoiceList" style="width:auto; margin:0">
+            Choose from our listing units
+          </label>
+          <label style="font-weight:normal; display:flex; align-items:center; gap:6px; margin-top:6px">
+            <input type="radio" name="unitChoice" value="specify" id="unitChoiceSpecify" style="width:auto; margin:0">
+            Specify the unit desired
+          </label>
+        </div>
+
+        <label id="unitListPicker" style="display:none">Select Unit *
+          <select id="unitSelect">
+            <option value="">Choose one</option>
+          </select></label>
+        <label id="unitSpecify" style="display:none">Desired Unit *
+          <input id="unitInput" placeholder="Type the unit you want"></label>
         <label>Color *<input name="color" required></label>
         <label>Payment Type *
           <select name="payment" required>
@@ -85,6 +106,7 @@
   var signedIn = false;
   var branchesReady = false;
   var branchList = [];         // galing sa Branch Contacts tab ng Google Sheet
+  var brandUnits = {};         // { brand: [unit, unit, ...] }, galing sa pricelist spreadsheet
 
   // Bubukas lang ang form kapag tama ang link, nakuha na ang branches, at naka-sign in na
   function updateForm() {
@@ -96,18 +118,27 @@
     try {
       var res = await fetch(SCRIPT_URL);
       var result = await res.json();
-      branchList = result.branches || [];
+            branchList = result.branches || [];
+      brandUnits = result.brandUnits || {};
     } catch (err) {
       linkOk = false;
       showMessage('Could not load the form. Check your connection and refresh the page.', true);
       return;
     }
-    var picker = document.querySelector('select[name="branch"]');
+        var picker = document.querySelector('select[name="branch"]');
     branchList.forEach(function (b) {
       var option = document.createElement('option');
       option.value = b.branch;
       option.textContent = b.branch;
       picker.appendChild(option);
+    });
+
+    var brandSelect = document.getElementById('brandSelect');
+    Object.keys(brandUnits).forEach(function (brand) {
+      var option = document.createElement('option');
+      option.value = brand;
+      option.textContent = brand;
+      brandSelect.appendChild(option);
     });
 
     // Walk-in: ang branch ay galing sa link, hindi na pipili ang customer
@@ -271,12 +302,60 @@
     box.appendChild(line);
   }
 
-  function showMessage(text, isError) {
+    function showMessage(text, isError) {
     var box = document.getElementById('msg');
     box.textContent = text;
     box.className = isError ? 'error' : 'success';
   }
 
+  // Pagpili ng brand: ipinapakita ang choice (listing/specify) at pinupunan ang listahan ng units
+  function onBrandChange() {
+    var brand = document.getElementById('brandSelect').value;
+    var unitSelect = document.getElementById('unitSelect');
+    var unitInput = document.getElementById('unitInput');
+
+    document.querySelectorAll('input[name="unitChoice"]').forEach(function (r) { r.checked = false; });
+    unitSelect.innerHTML = '<option value="">Choose one</option>';
+    unitInput.value = '';
+    onUnitChoiceChange();
+
+    if (!brand) {
+      document.getElementById('unitChoiceBox').style.display = 'none';
+      return;
+    }
+    document.getElementById('unitChoiceBox').style.display = 'block';
+    (brandUnits[brand] || []).forEach(function (unit) {
+      var option = document.createElement('option');
+      option.value = unit;
+      option.textContent = unit;
+      unitSelect.appendChild(option);
+    });
+  }
+
+  // Pagpili ng "Choose from our listing units" o "Specify the unit desired"
+  function onUnitChoiceChange() {
+    var choice = document.querySelector('input[name="unitChoice"]:checked');
+    var unitSelect = document.getElementById('unitSelect');
+    var unitInput = document.getElementById('unitInput');
+
+    document.getElementById('unitListPicker').style.display = 'none';
+    document.getElementById('unitSpecify').style.display = 'none';
+    unitSelect.required = false;
+    unitInput.required = false;
+
+    if (!choice) return;
+    if (choice.value === 'list') {
+      document.getElementById('unitListPicker').style.display = 'block';
+      unitSelect.required = true;
+    } else {
+      document.getElementById('unitSpecify').style.display = 'block';
+      unitInput.required = true;
+    }
+  }
+
+  document.getElementById('brandSelect').addEventListener('change', onBrandChange);
+  document.getElementById('unitChoiceList').addEventListener('change', onUnitChoiceChange);
+  document.getElementById('unitChoiceSpecify').addEventListener('change', onUnitChoiceChange);
   // Tinatawag ng Google pagkatapos mag-sign in
   function onGoogleLogin(response) {
     idToken = response.credential;
@@ -291,9 +370,14 @@
       { theme: 'outline', size: 'large' });
   }
 
-  async function submitForm(event) {
+    async function submitForm(event) {
     event.preventDefault();
     var data = Object.fromEntries(new FormData(event.target));
+    var unitChoice = document.querySelector('input[name="unitChoice"]:checked');
+    data.unit = (unitChoice && unitChoice.value === 'specify')
+      ? document.getElementById('unitInput').value.trim()
+      : document.getElementById('unitSelect').value;
+    delete data.unitChoice;
     data.idToken = idToken;
 	data.ref = ref;
     data.src = src;
