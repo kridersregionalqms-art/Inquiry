@@ -33,8 +33,9 @@
   <div class="body">
     <p style="font-size:14px">1. Sign in with your Google account to continue.</p>
     <div id="googleButton"></div>
-    <p id="who"></p>
-	  <div id="activeBox"></div>
+        <p id="who"></p>
+    <p id="checkMsg" style="font-size:14px; font-weight:bold; margin:10px 0 0"></p>
+    <div id="activeBox"></div>
 
     <form id="inquiryForm" onsubmit="submitForm(event)">
       <fieldset id="fields" disabled>
@@ -159,10 +160,17 @@
     return line;
   }
 
+  // Message sa taas ng form (sa ilalim ng "Signed in as"), para agad makita ni customer
+  function showTopMessage(text, isError) {
+    var box = document.getElementById('checkMsg');
+    box.textContent = text;
+    box.className = isError ? 'error' : 'success';
+  }
+
   // Tinitingnan kung may aktibong inquiry na ang email bago buksan ang form
   async function checkInquiries() {
     if (!linkOk) return;
-    showMessage('Checking your inquiries...', false);
+        showTopMessage('Checking your inquiries...', false);
     var result;
     try {
       if (branchesPromise) await branchesPromise;
@@ -174,14 +182,14 @@
       });
       result = await res.json();
     } catch (err) {
-      showMessage('Could not check your inquiries. Check your connection and refresh the page.', true);
+      showTopMessage('Could not check your inquiries. Check your connection and refresh the page.', true);
       return;
     }
-    if (!result.ok) {
-      showMessage(result.message, true);
+        if (!result.ok) {
+      showTopMessage(result.message, true);
       return;
     }
-    showMessage('', false);
+    showTopMessage('', false);
     if (result.inquiries && result.inquiries.length) {
       showActiveInquiries(result.inquiries);
       return;
