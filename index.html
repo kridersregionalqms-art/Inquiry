@@ -34,6 +34,7 @@
     <p style="font-size:14px">1. Sign in with your Google account to continue.</p>
     <div id="googleButton"></div>
     <p id="who"></p>
+	  <div id="activeBox"></div>
 
     <form id="inquiryForm" onsubmit="submitForm(event)">
       <fieldset id="fields" disabled>
@@ -129,6 +130,109 @@
     updateForm();
   }
 
+  var wantsAnother = false;
+  var branchesPromise = null;
+  var APPLICATION_PAGE = 'application.html'; // gagawin sa Step 3
+
+  // Linya ng contact ng isang branch (o null kung wala sa listahan)
+  function contactLine(branchName) {
+    var found = branchList.filter(function (b) { return b.branch === branchName; })[0];
+    if (!found) return null;
+    var line = document.createElement('div');
+    line.style.marginTop = '6px';
+    line.appendChild(document.createTextNode(found.branch + ' - '));
+    if (found.contact) {
+      var phone = document.createElement('a');
+      phone.href = 'tel:' + found.contact.replace(/[^0-9+]/g, '');
+      phone.textContent = found.contact;
+      line.appendChild(phone);
+    }
+    if (found.link) {
+      line.appendChild(document.createTextNode(' - '));
+      var fb = document.createElement('a');
+      fb.href = found.link;
+      fb.target = '_blank';
+      fb.rel = 'noopener';
+      fb.textContent = 'Facebook Page';
+      line.appendChild(fb);
+    }
+    return line;
+  }
+
+  // Tinitingnan kung may aktibong inquiry na ang email bago buksan ang form
+  async function checkInquiries() {
+    if (!linkOk) return;
+    showMessage('Checking your inquiries...', false);
+    var result;
+    try {
+      if (branchesPromise) await branchesPromise;
+      if (!linkOk) return;
+      var res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'status', idToken: idToken })
+      });
+      result = await res.json();
+    } catch (err) {
+      showMessage('Could not check your inquiries. Check your connection and refresh the page.', true);
+      return;
+    }
+    if (!result.ok) {
+      showMessage(result.message, true);
+      return;
+    }
+    showMessage('', false);
+    if (result.inquiries && result.inquiries.length) {
+      showActiveInquiries(result.inquiries);
+      return;
+    }
+    signedIn = true;
+    updateForm();
+  }
+
+  // Ipinapakita ang mga aktibong inquiry, may Proceed to application at Inquire another
+  function showActiveInquiries(list) {
+    document.getElementById('inquiryForm').style.display = 'none';
+    var box = document.getElementById('activeBox');
+    box.textContent = '';
+    var intro = document.createElement('p');
+    intro.style.fontWeight = 'bold';
+    intro.textContent = 'You already have an active inquiry:';
+    box.appendChild(intro);
+    list.forEach(function (q) {
+      var item = document.createElement('div');
+      item.style.cssText = 'border:1px solid #94a3b8; border-radius:6px; padding:10px; margin-top:10px; font-size:14px';
+      var title = document.createElement('div');
+      title.style.fontWeight = 'bold';
+      title.textContent = q.brand + ' ' + q.unit + ' - ' + q.color + ' (' + q.payment + ')';
+      var meta = document.createElement('div');
+      meta.textContent = q.branch + ' | Valid until ' +
+        new Date(q.expires).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      item.appendChild(title);
+      item.appendChild(meta);
+      var contact = contactLine(q.branch);
+      if (contact) item.appendChild(contact);
+      var go = document.createElement('a');
+      go.href = APPLICATION_PAGE + '?inquiry=' + encodeURIComponent(q.id);
+      go.textContent = 'Already inquired? Proceed to application';
+      go.style.cssText = 'display:block; margin-top:10px; padding:10px; border-radius:6px; background:#2563eb; color:#fff; text-align:center; font-weight:bold; text-decoration:none';
+      item.appendChild(go);
+      box.appendChild(item);
+    });
+    var another = document.createElement('button');
+    another.type = 'button';
+    another.textContent = 'Inquire another';
+    another.style.background = '#475569';
+    another.onclick = function () {
+      wantsAnother = true;
+      box.textContent = '';
+      document.getElementById('inquiryForm').style.display = '';
+      signedIn = true;
+      updateForm();
+    };
+    box.appendChild(another);
+  }
+
   // Ipinapakita ang contact ng branch pagkatapos mag-submit
   function showContact(branchName) {
     var box = document.getElementById('contactBox');
@@ -170,8 +274,7 @@
     idToken = response.credential;
     var payload = JSON.parse(atob(idToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
     document.getElementById('who').textContent = 'Signed in as ' + payload.email;
-    signedIn = true;
-    updateForm(); // saka lang magbubukas ang form
+        checkInquiries(); // titingnan muna kung may aktibong inquiry bago buksan ang form
   }
 
   function initGoogle() {
@@ -186,6 +289,7 @@
     data.idToken = idToken;
 	data.ref = ref;
     data.src = src;
+	  data.another = wantsAnother;
     var button = document.getElementById('sendButton');
     button.disabled = true;
     showMessage('Sending...', false);
@@ -215,7 +319,7 @@
     document.getElementById('fields').disabled = true;
     showMessage('Invalid link. Please scan the QR code again.', true);
   } else {
-    loadBranches();
+    branchesPromise = loadBranches();
   }
 </script>
 <script src="https://accounts.google.com/gsi/client" async defer onload="initGoogle()"></script>
