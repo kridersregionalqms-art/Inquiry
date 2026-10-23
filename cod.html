@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K RIDERS APPLICATION - CASH (COD)</title>
+<style>
+  body { margin: 0; font-family: Arial, sans-serif; background: #eef2f7; color: #0f2540; }
+  .card { max-width: 520px; margin: 16px auto; background: #fff; border-radius: 10px; overflow: hidden; }
+  header { background: #0f2540; color: #fff; padding: 18px 20px; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 6px 0 0; font-size: 14px; color: #cbd5e1; }
+  .body { padding: 8px 20px 20px; }
+  h2 { font-size: 16px; margin: 28px 0 0; padding-top: 14px; border-top: 1px solid #e2e8f0; }
+  label { display: block; margin-top: 14px; font-size: 14px; font-weight: bold; }
+  input, select, textarea { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 10px;
+    border: 1px solid #94a3b8; border-radius: 6px; font-size: 16px; font-family: inherit; }
+  input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px solid #2563eb; }
+  input[readonly] { background: #e2e8f0; }
+  fieldset { border: 0; padding: 0; margin: 0; }
+  #appForm { position: relative; }
+  #signInOverlay { position: absolute; inset: 0; z-index: 5; cursor: pointer; background: transparent; }
+  .choices { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 6px; }
+  .choices label { margin-top: 0; font-weight: normal; display: flex; align-items: center; gap: 6px; }
+  .choices input { width: auto; margin: 0; }
+  .hint { font-size: 13px; color: #64748b; margin: 4px 0 0; }
+  button { width: 100%; margin-top: 20px; padding: 12px; border: 0; border-radius: 6px;
+    background: #2563eb; color: #fff; font-size: 16px; font-weight: bold; }
+  button:disabled { background: #94a3b8; }
+  #who { font-size: 14px; margin: 10px 0 0; }
+  #checkMsg { font-size: 14px; font-weight: bold; margin: 10px 0 0; }
+  #msg { margin-top: 14px; font-size: 14px; font-weight: bold; }
+  .error { color: #b91c1c; } .success { color: #15803d; }
+</style>
+</head>
+<body>
+<div class="card">
+  <header>
+    <h1>APPLICATION FOR CASH (COD)</h1>
+    <p>Please complete the form below.</p>
+  </header>
+  <div class="body">
+    <p style="font-size:14px">1. Sign in with the same Google account you used for your inquiry.</p>
+    <div id="googleButton"></div>
+    <p id="who"></p>
+    <p id="checkMsg"></p>
+
+    <form id="appForm" onsubmit="submitForm(event)">
+      <div id="signInOverlay"></div>
+      <fieldset id="fields" disabled>
+
+        <h2>Applicant Information</h2>
+        <label>Email<input id="pEmail" readonly></label>
+        <label>Last Name<input id="pLast" readonly></label>
+        <label>First Name<input id="pFirst" readonly></label>
+        <label>Middle Name<input id="pMiddle" readonly></label>
+        <label>Suffix<input id="pSuffix" readonly></label>
+        <label>Contact Number<input id="pPhone" readonly></label>
+        <p class="hint">To change these, please edit your inquiry on the inquiry page.</p>
+
+        <label>Birthdate *<input type="date" name="dob" id="dob" required></label>
+        <label>Birthplace *<input name="birthplace" required></label>
+        <label>Citizenship *
+          <select name="citizenship" id="citizenship" required>
+            <option value="">Choose one</option>
+            <option>Filipino</option>
+            <option>Others</option>
+          </select></label>
+        <input name="citizenshipOther" id="citizenshipOther" placeholder="Please specify" style="display:none">
+
+        <label>Civil Status *</label>
+        <div class="choices">
+          <label><input type="radio" name="civilStatus" value="Single" required> Single</label>
+          <label><input type="radio" name="civilStatus" value="Married" required> Married</label>
+          <label><input type="radio" name="civilStatus" value="Others" required> Others</label>
+        </div>
+        <input name="civilOther" id="civilOther" placeholder="Please specify" style="display:none">
+
+        <h2>Current Address</h2>
+        <label>Sitio/Street *<input name="sitio" required></label>
+        <label>Barangay *<input name="barangay" required></label>
+        <label>Municipality/City *<input name="city" required></label>
+        <label>Province *<input name="province" required></label>
+        <label>Region *<input name="region" required></label>
+
+        <h2>Unit Details</h2>
+        <label>Brand<input id="pBrand" readonly></label>
+        <label>Unit<input id="pUnit" readonly></label>
+        <label>Model<input id="pModel" readonly></label>
+        <label>Color<input id="pColor" readonly></label>
+        <p class="hint">To change the brand, unit, model or color, please edit your inquiry on the inquiry page.</p>
+
+        <label>Expected Date of Release *<input type="date" name="releaseDate" id="releaseDate" required></label>
+        <p class="hint">Choose a date from today up to 3 months ahead.</p>
+
+        <div id="termsArea"></div>
+        <button type="submit" id="sendButton">Submit application</button>
+      </fieldset>
+    </form>
+    <p id="msg"></p>
+    <div id="contactBox" style="font-size:14px; margin-top:10px"></div>
+  </div>
+</div>
+
+<script src="terms.js"></script>
+<script src="spinner.js"></script>
+<script>
+  var GOOGLE_CLIENT_ID = '540530581718-307joed6m8omvlbgu6ppki2ciuetppt1.apps.googleusercontent.com';
+  var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2DJAqRCxGUImWey5Wt45abTIp52M-027sGKFq4YCXETtTylx-OSTQuTmYrK-LBiOw/exec';
+
+  var inquiryId = new URLSearchParams(location.search).get('inquiry') || '';
+  var idToken = '';
+  var branchList = [];   // galing sa Branch Contacts tab
+  var appOk = false;     // bubukas ang form kapag tama ang inquiry
+
+  function el(id) { return document.getElementById(id); }
+  function checked(name) {
+    var r = document.querySelector('input[name="' + name + '"]:checked');
+    return r ? r.value : '';
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function isoLocal(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function showTop(text, isError) {
+    var box = el('checkMsg');
+    box.textContent = text;
+    box.className = isError ? 'error' : 'success';
+  }
+  function showMessage(text, isError) {
+    var box = el('msg');
+    box.textContent = text;
+    box.className = isError ? 'error' : 'success';
+  }
+  async function post(body) {
+    var res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    });
+    return res.json();
+  }
+
+  // Bubukas lang ang form kapag tama ang inquiry
+  function updateForm() {
+    el('fields').disabled = !appOk;
+    el('signInOverlay').style.display = appOk ? 'none' : 'block';
+  }
+  el('signInOverlay').addEventListener('click', function () {
+    if (idToken) return; // may ibang mensahe na kung naka-sign in
+    el('googleButton').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showTop('Please sign in with your Google account above to continue.', true);
+  });
+
+  // ===== Mga petsa =====
+  var today = new Date();
+  var threeMonths = new Date();
+  threeMonths.setMonth(threeMonths.getMonth() + 3);
+  var eighteen = new Date();
+  eighteen.setFullYear(eighteen.getFullYear() - 18);
+  el('releaseDate').min = isoLocal(today);
+  el('releaseDate').max = isoLocal(threeMonths);
+  el('dob').max = isoLocal(eighteen);
+
+  // "Others" (specify)
+  function bindOther(selector, otherId, isSelect) {
+    var other = el(otherId);
+    document.querySelectorAll(selector).forEach(function (r) {
+      r.addEventListener('change', function () {
+        var value = isSelect ? r.value : checked(r.name);
+        var show = value === 'Others';
+        other.style.display = show ? 'block' : 'none';
+        other.required = show;
+        if (!show) other.value = '';
+      });
+    });
+  }
+  bindOther('input[name="civilStatus"]', 'civilOther', false);
+  bindOther('#citizenship', 'citizenshipOther', true);
+
+  // ===== Branches (para sa contact pagkatapos mag-submit) =====
+  async function loadBranches() {
+    try {
+      var res = await fetch(SCRIPT_URL);
+      var result = await res.json();
+      branchList = result.branches || [];
+    } catch (err) {
+      showTop('Could not load the form. Check your connection and refresh the page.', true);
+      throw err;
+    }
+  }
+  var branchesPromise = loadBranches();
+  branchesPromise.catch(function () {});
+
+  // ===== Pag-sign in at pag-check ng inquiry =====
+  // Naka-lock ang brand, unit, model, at color; sa inquiry lang puwedeng baguhin
+  function prefill(p) {
+    el('pEmail').value = p.email || '';
+    el('pLast').value = p.lastName || '';
+    el('pFirst').value = p.firstName || '';
+    el('pMiddle').value = p.middleName || '';
+    el('pSuffix').value = p.suffix || '';
+    el('pPhone').value = p.contact || '';
+    el('pBrand').value = p.brand || '';
+    el('pUnit').value = p.unit || '';
+    el('pModel').value = p.model || '';
+    el('pColor').value = p.color || '';
+  }
+
+  async function startApplication() {
+    Busy.start('Checking your inquiry...');
+    try {
+      await startApplicationWork();
+    } finally {
+      Busy.stop();
+    }
+  }
+
+  async function startApplicationWork() {
+    if (!inquiryId) {
+      showTop('Invalid link. Please open the application from the inquiry page.', true);
+      return;
+    }
+    showTop('Checking your inquiry...', false);
+    var result;
+    try {
+      await branchesPromise;
+      result = await post({ action: 'appInit', idToken: idToken, inquiryId: inquiryId, payment: 'Cash' });
+    } catch (err) {
+      showTop('Could not check your inquiry. Check your connection and refresh the page.', true);
+      return;
+    }
+    if (!result.ok) { showTop(result.message, true); return; }
+    showTop('', false);
+    prefill(result.prefill);
+    appOk = true;
+    updateForm();
+  }
+
+  function onGoogleLogin(response) {
+    idToken = response.credential;
+    var payload = JSON.parse(atob(idToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    el('who').textContent = 'Signed in as ' + payload.email;
+    startApplication();
+  }
+
+  function initGoogle() {
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleLogin });
+    google.accounts.id.renderButton(el('googleButton'), { theme: 'outline', size: 'large' });
+  }
+
+  // ===== Contact ng branch pagkatapos mag-submit =====
+  function showContact(branchName) {
+    var box = el('contactBox');
+    box.textContent = '';
+    var found = branchList.filter(function (b) { return b.branch === branchName; })[0];
+    if (!found) return;
+    var heading = document.createElement('div');
+    heading.textContent = 'Or contact us:';
+    var line = document.createElement('div');
+    line.style.marginTop = '6px';
+    line.appendChild(document.createTextNode(found.branch + ' - '));
+    if (found.contact) {
+      var phone = document.createElement('a');
+      phone.href = 'tel:' + found.contact.replace(/[^0-9+]/g, '');
+      phone.textContent = found.contact;
+      line.appendChild(phone);
+    }
+    if (found.link) {
+      line.appendChild(document.createTextNode(' - '));
+      var fb = document.createElement('a');
+      fb.href = found.link;
+      fb.target = '_blank';
+      fb.rel = 'noopener';
+      fb.textContent = 'Facebook Page';
+      line.appendChild(fb);
+    }
+    box.appendChild(heading);
+    box.appendChild(line);
+  }
+
+  // ===== Pagsumite =====
+  async function submitForm(event) {
+    event.preventDefault();
+    var data = Object.fromEntries(new FormData(event.target));
+    if (!Terms.isAccepted()) {
+      showMessage('Please read and accept the Terms & Conditions to send your application.', true);
+      Terms.requireAcceptance();
+      return;
+    }
+    data.consent = true;
+    data.action = 'application';
+    data.payment = 'Cash';
+    data.idToken = idToken;
+    data.inquiryId = inquiryId;
+    var button = el('sendButton');
+    button.disabled = true;
+    showMessage('Sending...', false);
+    Busy.start('Submitting your application...');
+    try {
+      var result = await post(data);
+      if (result.ok) {
+        el('appForm').style.display = 'none';
+        showMessage('Thank you! Your application was submitted. We will contact you soon.', false);
+        showContact(result.branch);
+      } else {
+        showMessage(result.message, true);
+        button.disabled = false;
+      }
+    } catch (err) {
+      showMessage('Could not send. Check your connection and try again.', true);
+      button.disabled = false;
+    } finally {
+      Busy.stop();
+    }
+  }
+
+  Terms.init('termsArea');
+  updateForm();
+</script>
+<script src="https://accounts.google.com/gsi/client" async defer onload="initGoogle()"></script>
+</body>
+</html>
