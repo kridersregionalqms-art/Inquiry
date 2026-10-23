@@ -417,8 +417,72 @@
     box.appendChild(wrap);
   }
 
+  // Sariling modal ng page (kapalit ng confirm ng browser). Ibinabalik ang true kung kinumpirma.
+  function confirmModal(title, message, confirmLabel) {
+    return new Promise(function (resolve) {
+      var overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed; inset:0; z-index:1000; background:rgba(15,37,64,0.6); display:flex; align-items:center; justify-content:center; padding:16px';
+
+      var dialog = document.createElement('div');
+      dialog.setAttribute('role', 'dialog');
+      dialog.setAttribute('aria-modal', 'true');
+      dialog.style.cssText = 'background:#fff; border-radius:10px; max-width:380px; width:100%; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3)';
+
+      var heading = document.createElement('div');
+      heading.style.cssText = 'font-size:18px; font-weight:bold; margin-bottom:8px';
+      heading.textContent = title;
+
+      var text = document.createElement('div');
+      text.style.cssText = 'font-size:14px; color:#334155';
+      text.textContent = message;
+
+      var buttons = document.createElement('div');
+      buttons.style.cssText = 'display:flex; gap:10px; margin-top:18px';
+
+      var cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.textContent = 'Cancel';
+      cancel.style.cssText = 'margin-top:0; background:#475569';
+
+      var ok = document.createElement('button');
+      ok.type = 'button';
+      ok.textContent = confirmLabel;
+      ok.style.cssText = 'margin-top:0; background:#b91c1c';
+
+      function onKey(event) {
+        if (event.key === 'Escape') close(false);
+      }
+      function close(answer) {
+        document.removeEventListener('keydown', onKey);
+        overlay.remove();
+        resolve(answer);
+      }
+
+      cancel.onclick = function () { close(false); };
+      ok.onclick = function () { close(true); };
+      overlay.addEventListener('click', function (event) {
+        if (event.target === overlay) close(false);
+      });
+      document.addEventListener('keydown', onKey);
+
+      buttons.appendChild(cancel);
+      buttons.appendChild(ok);
+      dialog.appendChild(heading);
+      dialog.appendChild(text);
+      dialog.appendChild(buttons);
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+      cancel.focus();
+    });
+  }
+
   async function deleteInquiry(inquiryId, button) {
-    if (!confirm('Delete this inquiry? Your information for this inquiry will be removed and this cannot be undone.')) return;
+    var confirmed = await confirmModal(
+      'Delete this inquiry?',
+      'Your information for this inquiry will be removed and this cannot be undone.',
+      'Delete'
+    );
+    if (!confirmed) return;
     button.disabled = true;
     try {
       var res = await fetch(SCRIPT_URL, {
