@@ -61,6 +61,7 @@
             <option>K Riders Tabok-Mandaue</option>
             <option>K Riders Centro-Mandaue</option>
             <option>K Riders Babag II-LLC</option>
+		<option>K Riders Maribago-LLC</option>
           </select></label>
         <label>Note<textarea name="note" rows="3"></textarea></label>
         <button type="submit" id="sendButton">Send inquiry</button>
@@ -76,8 +77,10 @@
   var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2DJAqRCxGUImWey5Wt45abTIp52M-027sGKFq4YCXETtTylx-OSTQuTmYrK-LBiOw/exec';
 
   var idToken = '';
-  // Ang referral code ay galing sa link (?ref=...). Walang field para galawin ito.
-  var ref = new URLSearchParams(location.search).get('ref') || '';
+    // Ang referral code at src ay galing sa link (?src=...&ref=...). Walang field para galawin ito.
+  var params = new URLSearchParams(location.search);
+  var ref = params.get('ref') || '';
+  var src = params.get('src') || '';
 
   function showMessage(text, isError) {
     var box = document.getElementById('msg');
@@ -103,7 +106,8 @@
     event.preventDefault();
     var data = Object.fromEntries(new FormData(event.target));
     data.idToken = idToken;
-    data.ref = ref;
+	data.ref = ref;
+    data.src = src;
     var button = document.getElementById('sendButton');
     button.disabled = true;
     showMessage('Sending...', false);
@@ -128,8 +132,8 @@
     }
   }
 
-  if (!ref) {
-    document.getElementById('fields').disabled = true;
+  if (!ref || !src) {
+	  document.getElementById('fields').disabled = true;
     showMessage('Invalid link. Please scan the QR code again.', true);
   }
 </script>
