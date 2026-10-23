@@ -418,8 +418,11 @@
   }
 
   // Sariling modal ng page (kapalit ng confirm ng browser). Ibinabalik ang true kung kinumpirma.
-  function confirmModal(title, message, confirmLabel) {
+  // Kung may work (async function na nagbabalik ng error message o ''), magpapakita ng loading habang
+  // tumatakbo ito at hindi maisasara ang modal. Ibinabalik ang true kung natapos o kinumpirma.
+  function confirmModal(title, message, confirmLabel, busyLabel, work) {
     return new Promise(function (resolve) {
+      var busy = false;
       var overlay = document.createElement('div');
       overlay.style.cssText = 'position:fixed; inset:0; z-index:1000; background:rgba(15,37,64,0.6); display:flex; align-items:center; justify-content:center; padding:16px';
 
@@ -450,7 +453,7 @@
       ok.style.cssText = 'margin-top:0; background:#b91c1c';
 
       function onKey(event) {
-        if (event.key === 'Escape') close(false);
+        if (event.key === 'Escape' && !busy) close(false);
       }
       function close(answer) {
         document.removeEventListener('keydown', onKey);
@@ -458,17 +461,58 @@
         resolve(answer);
       }
 
-      cancel.onclick = function () { close(false); };
-      ok.onclick = function () { close(true); };
+      // Loading / error sa loob ng modal
+      if (!document.getElementById('modalSpinStyle')) {
+        var spinStyle = document.createElement('style');
+        spinStyle.id = 'modalSpinStyle';
+        spinStyle.textContent = '@keyframes modalSpin { to { transform: rotate(360deg); } }';
+        document.head.appendChild(spinStyle);
+      }
+      var status = document.createElement('div');
+      status.setAttribute('aria-live', 'polite');
+      status.style.cssText = 'display:none; margin-top:14px; font-size:14px; font-weight:bold';
+
+      function setBusy(isBusy) {
+        busy = isBusy;
+        cancel.disabled = isBusy;
+        ok.disabled = isBusy;
+        cancel.style.opacity = ok.style.opacity = isBusy ? '0.5' : '1';
+        dialog.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+      }
+
+      cancel.onclick = function () { if (!busy) close(false); };
       overlay.addEventListener('click', function (event) {
-        if (event.target === overlay) close(false);
+        if (!busy && event.target === overlay) close(false);
       });
+      ok.onclick = async function () {
+        if (busy) return;
+        if (!work) { close(true); return; }
+        setBusy(true);
+        var spinner = document.createElement('span');
+        spinner.style.cssText = 'display:inline-block; width:14px; height:14px; margin-right:8px; vertical-align:-2px; border:3px solid #cbd5e1; border-top-color:#b91c1c; border-radius:50%; animation:modalSpin 0.8s linear infinite';
+        status.textContent = '';
+        status.style.color = '#334155';
+        status.appendChild(spinner);
+        status.appendChild(document.createTextNode(busyLabel || 'Please wait...'));
+        status.style.display = 'block';
+        var error;
+        try {
+          error = await work();
+        } catch (err) {
+          error = 'Something went wrong. Please try again.';
+        }
+        if (!error) { close(true); return; }
+        setBusy(false);
+        status.textContent = error;
+        status.style.color = '#b91c1c';
+      };
       document.addEventListener('keydown', onKey);
 
       buttons.appendChild(cancel);
       buttons.appendChild(ok);
       dialog.appendChild(heading);
       dialog.appendChild(text);
+      dialog.appendChild(status);
       dialog.appendChild(buttons);
       overlay.appendChild(dialog);
       document.body.appendChild(overlay);
@@ -477,32 +521,28 @@
   }
 
   async function deleteInquiry(inquiryId, button) {
-    var confirmed = await confirmModal(
+    var done = await confirmModal(
       'Delete this inquiry?',
       'Your information for this inquiry will be removed and this cannot be undone.',
-      'Delete'
-    );
-    if (!confirmed) return;
-    button.disabled = true;
-    try {
-      var res = await fetch(SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'delete', idToken: idToken, inquiryId: inquiryId })
-      });
-      var result = await res.json();
-      if (!result.ok) {
-        showTopMessage(result.message, true);
-        button.disabled = false;
-        return;
+      'Delete',
+      'Deleting your inquiry...',
+      async function () {
+        try {
+          var res = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'delete', idToken: idToken, inquiryId: inquiryId })
+          });
+          var result = await res.json();
+          if (!result.ok) return result.message || 'Could not delete. Please try again.';
+        } catch (err) {
+          return 'Could not delete. Check your connection and try again.';
+        }
+        await checkInquiries(); // i-refresh ang listahan habang naka-loading pa ang modal
+        return '';
       }
-    } catch (err) {
-      showTopMessage('Could not delete. Check your connection and try again.', true);
-      button.disabled = false;
-      return;
-    }
-    await checkInquiries();
-    showTopMessage('Your inquiry was deleted.', false);
+    );
+    if (done) showTopMessage('Your inquiry was deleted.', false);
   }
 
   // Ipinapakita ang contact ng branch pagkatapos mag-submit
