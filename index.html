@@ -53,7 +53,7 @@
             <option>Cash</option>
                         <option>Installment</option>
           </select></label>
-        <label>Select Branch (Purchase/Release Location) *
+        <label id="branchPicker">Select Branch (Purchase/Release Location) *
           <select name="branch" required>
             <option value="">Choose one</option>
             <option>K Riders Poblacion-Liloan</option>
@@ -61,8 +61,10 @@
             <option>K Riders Tabok-Mandaue</option>
             <option>K Riders Centro-Mandaue</option>
             <option>K Riders Babag II-LLC</option>
-		<option>K Riders Maribago-LLC</option>
+		            <option>K Riders Maribago-LLC</option>
           </select></label>
+        <label id="branchFixed" style="display:none">Branch
+          <input id="branchFixedText" readonly tabindex="-1" style="background:#e2e8f0"></label>
         <label>Note<textarea name="note" rows="3"></textarea></label>
         <button type="submit" id="sendButton">Send inquiry</button>
       </fieldset>
@@ -80,7 +82,28 @@
     // Ang referral code at src ay galing sa link (?src=...&ref=...). Walang field para galawin ito.
   var params = new URLSearchParams(location.search);
   var ref = params.get('ref') || '';
-  var src = params.get('src') || '';
+    var src = params.get('src') || '';
+
+  // Mga branch (dapat kapareho ng listahan sa Apps Script)
+  var BRANCHES = ['K Riders Poblacion-Liloan', 'K Riders Catarman-Liloan', 'K Riders Tabok-Mandaue',
+    'K Riders Centro-Mandaue', 'K Riders Babag II-LLC', 'K Riders Maribago-LLC'];
+
+  // Walk-in: ang branch ay galing sa link, hindi na pipili ang customer
+  if (src === 'walkin') {
+    var walkInBranch = BRANCHES.filter(function (b) {
+      return b.toLowerCase() === ref.trim().replace(/\s+/g, ' ').toLowerCase();
+    })[0];
+    if (walkInBranch) {
+      var picker = document.querySelector('select[name="branch"]');
+      picker.required = false;
+      picker.disabled = true; // hindi na ito ipapadala
+      document.getElementById('branchPicker').style.display = 'none';
+      document.getElementById('branchFixed').style.display = 'block';
+      document.getElementById('branchFixedText').value = walkInBranch;
+    } else {
+      ref = ''; // hindi kilalang branch, kaya invalid link
+    }
+  }
 
   function showMessage(text, isError) {
     var box = document.getElementById('msg');
