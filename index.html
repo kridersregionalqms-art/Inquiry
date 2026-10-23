@@ -89,6 +89,7 @@
         <label id="branchFixed" style="display:none">Branch
           <input id="branchFixedText" readonly tabindex="-1" style="background:#e2e8f0"></label>
         <label>Note<textarea name="note" rows="3"></textarea></label>
+        <div id="termsArea"></div>
         <button type="submit" id="sendButton">Send inquiry</button>
       </fieldset>
     </form>
@@ -97,6 +98,7 @@
   </div>
 </div>
 
+<script src="terms.js"></script>
 <script>
   // ===== SETTINGS: palitan ang dalawang ito =====
   var GOOGLE_CLIENT_ID = '540530581718-307joed6m8omvlbgu6ppki2ciuetppt1.apps.googleusercontent.com';
@@ -179,7 +181,10 @@
 
   var wantsAnother = false;
   var branchesPromise = null;
-  var APPLICATION_PAGE = 'application.html'; // gagawin sa Step 3
+  // Installment → application.html, Cash → cod.html
+  function applicationUrl(payment, inquiryId) {
+    return (payment === 'Cash' ? 'cod.html' : 'application.html') + '?inquiry=' + encodeURIComponent(inquiryId);
+  }
 
   // Linya ng contact ng isang branch (o null kung wala sa listahan)
   function contactLine(branchName) {
@@ -267,7 +272,7 @@
       var contact = contactLine(q.branch);
       if (contact) item.appendChild(contact);
       var go = document.createElement('a');
-      go.href = APPLICATION_PAGE + '?inquiry=' + encodeURIComponent(q.id);
+      go.href = applicationUrl(q.payment, q.id);
       go.textContent = 'Already inquired? Proceed to application';
       go.style.cssText = 'display:block; margin-top:10px; padding:10px; border-radius:6px; background:#2563eb; color:#fff; text-align:center; font-weight:bold; text-decoration:none';
       item.appendChild(go);
@@ -324,9 +329,9 @@
   }
 
   // Button papunta sa application page, matapos matagumpay na ma-submit ang inquiry
-  function showProceedButton(inquiryId) {
+  function showProceedButton(inquiryId, payment) {
     var go = document.createElement('a');
-    go.href = APPLICATION_PAGE + '?inquiry=' + encodeURIComponent(inquiryId);
+    go.href = applicationUrl(payment, inquiryId);
     go.textContent = 'Proceed to application';
     go.style.cssText = 'display:block; margin-top:14px; padding:12px; border-radius:6px; background:#2563eb; color:#fff; text-align:center; font-weight:bold; text-decoration:none';
     document.getElementById('contactBox').insertAdjacentElement('beforebegin', go);
@@ -408,6 +413,12 @@
 	data.ref = ref;
     data.src = src;
 	  data.another = wantsAnother;
+    if (!Terms.isAccepted()) {
+      showMessage('Please read and accept the Terms & Conditions to send your inquiry.', true);
+      Terms.requireAcceptance();
+      return;
+    }
+    data.consent = true;
     var button = document.getElementById('sendButton');
     button.disabled = true;
     showMessage('Sending...', false);
@@ -423,7 +434,7 @@
         document.getElementById('inquiryForm').style.display = 'none';
         showMessage('Thank you! Your inquiry was sent. We will contact you soon.', false);
         showContact(result.branch);
-        if (result.inquiryId) showProceedButton(result.inquiryId);
+        if (result.inquiryId) showProceedButton(result.inquiryId, data.payment);
       } else {
         showMessage(result.message, true);
         button.disabled = false;
@@ -433,6 +444,8 @@
       button.disabled = false;
     }
   }
+
+  Terms.init('termsArea');
 
   if (!ref || !src) {
     document.getElementById('fields').disabled = true;
