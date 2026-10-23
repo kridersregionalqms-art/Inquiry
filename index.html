@@ -288,6 +288,12 @@
       edit.style.cssText = 'margin-top:8px; background:#fff; color:#2563eb; border:1px solid #2563eb';
       edit.onclick = function () { startEdit(q); };
       item.appendChild(edit);
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.textContent = 'Delete this inquiry';
+      remove.style.cssText = 'margin-top:8px; background:#fff; color:#b91c1c; border:1px solid #b91c1c';
+      remove.onclick = function () { deleteInquiry(q.id, remove); };
+      item.appendChild(remove);
       box.appendChild(item);
     });
     var another = document.createElement('button');
