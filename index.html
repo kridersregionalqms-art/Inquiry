@@ -100,6 +100,7 @@
 </div>
 
 <script src="terms.js"></script>
+<script src="spinner.js"></script>
 <script>
   // ===== SETTINGS: palitan ang dalawang ito =====
   var GOOGLE_CLIENT_ID = '540530581718-307joed6m8omvlbgu6ppki2ciuetppt1.apps.googleusercontent.com';
@@ -222,6 +223,15 @@
 
   // Tinitingnan kung may aktibong inquiry na ang email bago buksan ang form
   async function checkInquiries() {
+    Busy.start('Checking your inquiries...');
+    try {
+      await checkInquiriesWork();
+    } finally {
+      Busy.stop();
+    }
+  }
+
+  async function checkInquiriesWork() {
     if (!linkOk) return;
         showTopMessage('Checking your inquiries...', false);
     var result;
@@ -497,7 +507,12 @@
         status.style.display = 'block';
         var error;
         try {
-          error = await work();
+          Busy.start(busyLabel || 'Please wait...');
+          try {
+            error = await work();
+          } finally {
+            Busy.stop();
+          }
         } catch (err) {
           error = 'Something went wrong. Please try again.';
         }
@@ -679,6 +694,7 @@
     var button = document.getElementById('sendButton');
     button.disabled = true;
     showMessage('Sending...', false);
+        Busy.start(editingId ? 'Saving your changes...' : 'Sending your inquiry...');
     try {
       // text/plain para hindi mag-preflight ang browser sa Apps Script
       var res = await fetch(SCRIPT_URL, {
@@ -707,6 +723,8 @@
     } catch (err) {
       showMessage('Could not send. Check your connection and try again.', true);
       button.disabled = false;
+    } finally {
+      Busy.stop();
     }
   }
 
