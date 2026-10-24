@@ -73,6 +73,8 @@
           <select id="unitSelect">
             <option value="">Choose one</option>
           </select></label>
+                  <label id="modelPicker" style="display:none">Model
+          <input id="modelInput" readonly tabindex="-1" style="background:#e2e8f0"></label>
         <label id="unitSpecify" style="display:none">Desired Unit *
           <input id="unitInput" placeholder="Type the unit you want"></label>
         <label>Color *<input name="color" required></label>
@@ -101,6 +103,7 @@
 
 <script src="terms.js"></script>
 <script src="spinner.js"></script>
+<script src="gate.js"></script>
 <script>
   // ===== SETTINGS: palitan ang dalawang ito =====
   var GOOGLE_CLIENT_ID = '540530581718-307joed6m8omvlbgu6ppki2ciuetppt1.apps.googleusercontent.com';
@@ -116,7 +119,7 @@
   var signedIn = false;
   var branchesReady = false;
   var branchList = [];         // galing sa Branch Contacts tab ng Google Sheet
-  var brandUnits = {};         // { brand: [unit, unit, ...] }, galing sa pricelist spreadsheet
+  var brandItems = {};         // { brand: [{ unit, model }, ...] }, galing sa pricelist spreadsheet (column A at B)
 
   // Bubukas lang ang form kapag tama ang link, nakuha na ang branches, at naka-sign in na
     function updateForm() {
@@ -138,7 +141,7 @@
       var res = await fetch(SCRIPT_URL);
       var result = await res.json();
             branchList = result.branches || [];
-      brandUnits = result.brandUnits || {};
+      brandItems = result.brandItems || {};
     } catch (err) {
       linkOk = false;
       showMessage('Could not load the form. Check your connection and refresh the page.', true);
@@ -153,7 +156,7 @@
     });
 
     var brandSelect = document.getElementById('brandSelect');
-    Object.keys(brandUnits).forEach(function (brand) {
+    Object.keys(brandItems).forEach(function (brand) {
       var option = document.createElement('option');
       option.value = brand;
       option.textContent = brand;
@@ -186,6 +189,7 @@
   var branchesPromise = null;
   // Installment → application.html, Cash → cod.html
   function applicationUrl(payment, inquiryId) {
+        Gate.mark(inquiryId); // itinatala na dumaan sa inquiry page; ito lang ang paraan para mabuksan ang application
     return (payment === 'Cash' ? 'cod.html' : 'application.html') + '?inquiry=' + encodeURIComponent(inquiryId);
   }
 
@@ -238,7 +242,7 @@
     try {
       if (branchesPromise) await branchesPromise;
       if (!linkOk) return;
-      var res = await fetch(SCRIPT_URL, {
+      var res = await Busy.fetch(SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: 'status', idToken: idToken })
@@ -353,11 +357,25 @@
     if (brandSelect.value !== q.brand) brandSelect.value = ''; // wala na sa listahan, pipili ulit
     onBrandChange();
     if (brandSelect.value) {
-      var inList = (brandUnits[q.brand] || []).indexOf(q.unit) !== -1;
+      var items = brandItems[q.brand] || [];
+      var index = -1;
+      items.forEach(function (it, i) {
+        if (index === -1 && it.unit === q.unit && it.model === (q.model || '')) index = i;
+      });
+      // Lumang inquiry na walang model: kung iisa lang ang unit na may ganitong pangalan, iyon na ang gagamitin
+      if (index === -1 && !q.model) {
+        var same = items.filter(function (it) { return it.unit === q.unit; });
+        if (same.length === 1) index = items.indexOf(same[0]);
+      }
+      var inList = index !== -1 || items.some(function (it) { return it.unit === q.unit; });
       document.getElementById(inList ? 'unitChoiceList' : 'unitChoiceSpecify').checked = true;
       onUnitChoiceChange();
-      if (inList) document.getElementById('unitSelect').value = q.unit;
-      else document.getElementById('unitInput').value = q.unit;
+      if (inList) {
+        if (index !== -1) document.getElementById('unitSelect').value = String(index);
+        onUnitSelectChange();
+      } else {
+        document.getElementById('unitInput').value = q.unit;
+      }
     }
 
     f['payment'].value = q.payment;
@@ -543,10 +561,10 @@
       'Deleting your inquiry...',
       async function () {
         try {
-          var res = await fetch(SCRIPT_URL, {
+          var res = await Busy.fetch(SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'delete', idToken: idToken, inquiryId: inquiryId })
+            body: JSON.stringify({ action: 'delete', idToken: idToken, inquiryId: inquiryId, requestId: Busy.newId() })
           });
           var result = await res.json();
           if (!result.ok) return result.message || 'Could not delete. Please try again.';
@@ -621,10 +639,12 @@
       return;
     }
     document.getElementById('unitChoiceBox').style.display = 'block';
-    (brandUnits[brand] || []).forEach(function (unit) {
+    var items = brandItems[brand] || [];
+    items.forEach(function (item, i) {
+      var sameName = items.filter(function (x) { return x.unit === item.unit; }).length > 1;
       var option = document.createElement('option');
-      option.value = unit;
-      option.textContent = unit;
+      option.value = String(i); // pwesto ng unit sa listahan; dito kinukuha ang unit at ang model
+      option.textContent = (sameName && item.model) ? item.unit + ' (' + item.model + ')' : item.unit;
       unitSelect.appendChild(option);
     });
   }
@@ -638,6 +658,7 @@
         document.getElementById('unitListPicker').style.display = 'none';
     document.getElementById('unitSpecify').style.display = 'none';
     document.getElementById('listUnitNote').style.display = 'none';
+        document.getElementById('modelPicker').style.display = 'none';
     unitSelect.required = false;
     unitInput.required = false;
 
@@ -646,13 +667,23 @@
       document.getElementById('unitListPicker').style.display = 'block';
       document.getElementById('listUnitNote').style.display = 'block';
       unitSelect.required = true;
+            onUnitSelectChange();
     } else {
       document.getElementById('unitSpecify').style.display = 'block';
       unitInput.required = true;
     }
   }
 
+  // Pagpili ng unit: ang model ay kusang lalabas (read-only) mula sa pricelist, hindi ito pinipili ng customer
+  function onUnitSelectChange() {
+    var items = brandItems[document.getElementById('brandSelect').value] || [];
+    var item = items[document.getElementById('unitSelect').value];
+    document.getElementById('modelInput').value = item ? item.model : '';
+    document.getElementById('modelPicker').style.display = (item && item.model) ? 'block' : 'none';
+  }
+
   document.getElementById('brandSelect').addEventListener('change', onBrandChange);
+  document.getElementById('unitSelect').addEventListener('change', onUnitSelectChange);
   document.getElementById('unitChoiceList').addEventListener('change', onUnitChoiceChange);
   document.getElementById('unitChoiceSpecify').addEventListener('change', onUnitChoiceChange);
   // Tinatawag ng Google pagkatapos mag-sign in
@@ -673,9 +704,17 @@
     event.preventDefault();
     var data = Object.fromEntries(new FormData(event.target));
     var unitChoice = document.querySelector('input[name="unitChoice"]:checked');
-    data.unit = (unitChoice && unitChoice.value === 'specify')
-      ? document.getElementById('unitInput').value.trim()
-      : document.getElementById('unitSelect').value;
+    var items = brandItems[document.getElementById('brandSelect').value] || [];
+    var picked = items[document.getElementById('unitSelect').value];
+    data.unitMode = unitChoice ? unitChoice.value : '';
+    if (unitChoice && unitChoice.value === 'specify') {
+      data.unit = document.getElementById('unitInput').value.trim();
+      data.model = '';
+    } else {
+      data.unit = picked ? picked.unit : '';
+      data.model = picked ? picked.model : '';
+    }
+    data.requestId = Busy.newId();
     delete data.unitChoice;
     data.idToken = idToken;
 	data.ref = ref;
@@ -697,7 +736,7 @@
         Busy.start(editingId ? 'Saving your changes...' : 'Sending your inquiry...');
     try {
       // text/plain para hindi mag-preflight ang browser sa Apps Script
-      var res = await fetch(SCRIPT_URL, {
+      var res = await Busy.fetch(SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(data)
