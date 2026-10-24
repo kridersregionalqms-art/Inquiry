@@ -181,7 +181,7 @@
   // ===== Branches (para sa contact pagkatapos mag-submit) =====
   async function loadBranches() {
     try {
-      var res = await fetch(SCRIPT_URL);
+      var res = await fetch(SCRIPT_URL + '?action=branches');
       var result = await res.json();
       branchList = result.branches || [];
     } catch (err) {
@@ -225,8 +225,10 @@
     showTop('Checking your inquiry...', false);
     var result;
     try {
-      await branchesPromise;
-      result = await post({ action: 'appInit', idToken: idToken, inquiryId: inquiryId, payment: 'Cash' });
+      var initReq = post({ action: 'appInit', idToken: idToken, inquiryId: inquiryId, payment: 'Cash' });
+      initReq.catch(function () {});
+      await branchesPromise; // sabay na tumatakbo sa appInit
+      result = await initReq;
     } catch (err) {
       showTop('Could not check your inquiry. Check your connection and refresh the page.', true);
       return;
