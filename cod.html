@@ -104,11 +104,13 @@
 
 <script src="terms.js"></script>
 <script src="spinner.js"></script>
+<script src="gate.js"></script>
 <script>
   var GOOGLE_CLIENT_ID = '540530581718-307joed6m8omvlbgu6ppki2ciuetppt1.apps.googleusercontent.com';
   var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2DJAqRCxGUImWey5Wt45abTIp52M-027sGKFq4YCXETtTylx-OSTQuTmYrK-LBiOw/exec';
 
   var inquiryId = new URLSearchParams(location.search).get('inquiry') || '';
+    Gate.check(inquiryId); // kung hindi galing sa inquiry page, ibabalik doon
   var idToken = '';
   var branchList = [];   // galing sa Branch Contacts tab
   var appOk = false;     // bubukas ang form kapag tama ang inquiry
@@ -131,7 +133,7 @@
     box.className = isError ? 'error' : 'success';
   }
   async function post(body) {
-    var res = await fetch(SCRIPT_URL, {
+    var res = await Busy.fetch(SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(body)
@@ -287,8 +289,8 @@
       return;
     }
     data.consent = true;
-    data.action = 'application';
-    data.payment = 'Cash';
+    data.action = 'applicationCod';
+    data.requestId = Busy.newId();
     data.idToken = idToken;
     data.inquiryId = inquiryId;
     var button = el('sendButton');
