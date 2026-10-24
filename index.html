@@ -138,9 +138,17 @@
   // Kinukuha ang listahan ng branches at contacts mula sa Google Sheet
   async function loadBranches() {
     try {
-      var res = await fetch(SCRIPT_URL);
-      var result = await res.json();
-            branchList = result.branches || [];
+      var result = null;
+      try {
+        var saved = JSON.parse(sessionStorage.getItem('krHome') || 'null');
+        if (saved && Date.now() - saved.t < 300000) result = saved.d; // 5 minuto
+      } catch (e) { /* walang cache */ }
+      if (!result) {
+        var res = await fetch(SCRIPT_URL);
+        result = await res.json();
+        try { sessionStorage.setItem('krHome', JSON.stringify({ t: Date.now(), d: result })); } catch (e) { /* ayos lang */ }
+      }
+      branchList = result.branches || [];
       brandItems = result.brandItems || {};
     } catch (err) {
       linkOk = false;
@@ -248,14 +256,16 @@
         showTopMessage('Checking your inquiries...', false);
     var result;
     try {
-      if (branchesPromise) await branchesPromise;
-      if (!linkOk) return;
-      var res = await Busy.fetch(SCRIPT_URL, {
+      // Sabay na tatakbo ang status at ang pag-load ng branches
+      var statusReq = Busy.fetch(SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: 'status', idToken: idToken })
-      });
-      result = await res.json();
+      }).then(function (r) { return r.json(); });
+      statusReq.catch(function () {});
+      if (branchesPromise) await branchesPromise;
+      if (!linkOk) return;
+      result = await statusReq;
     } catch (err) {
       showTopMessage('Could not check your inquiries. Check your connection and refresh the page.', true);
       return;
