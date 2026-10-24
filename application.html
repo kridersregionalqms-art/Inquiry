@@ -384,6 +384,8 @@
     el('pBrand').value = p.brand || '';
     el('pUnit').value = p.unit || '';
     el('pModel').value = p.model || '';
+    Terms.setBranch(branchList.filter(function (b) { return b.branch === p.branch; })[0] || null);
+    Terms.setBranch(branchList.filter(function (b) { return b.branch === p.branch; })[0] || null);
     var inList = Object.prototype.hasOwnProperty.call(catalog[p.brand] || {}, p.unit);
     unitMode = (inList && p.model) ? 'list' : 'specify';
   }
