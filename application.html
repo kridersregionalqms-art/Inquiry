@@ -120,6 +120,7 @@
         <label>Color<input name="color" id="color" readonly></label>
         <p class="hint">To change the brand, unit, model or color, please edit your inquiry on the inquiry page.</p>
         <p class="hint">Please note that unit availability may vary by branch and is subject to change. For the latest availability, kindly contact your selected K Riders branch directly before visiting.</p>
+                <p class="hint" id="dpHint" style="display:none; color:#0f2540; font-weight:bold"></p>
         <label>Downpayment *
           <input name="dp" id="dp" type="number" min="0" step="0.01" inputmode="decimal" required></label>
         <label>Term *
@@ -159,11 +160,13 @@
 
 <script src="terms.js"></script>
 <script src="spinner.js"></script>
+<script src="gate.js"></script>
 <script>
   var GOOGLE_CLIENT_ID = '540530581718-307joed6m8omvlbgu6ppki2ciuetppt1.apps.googleusercontent.com';
   var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2DJAqRCxGUImWey5Wt45abTIp52M-027sGKFq4YCXETtTylx-OSTQuTmYrK-LBiOw/exec';
 
   var inquiryId = new URLSearchParams(location.search).get('inquiry') || '';
+    Gate.check(inquiryId); // kung hindi galing sa inquiry page, ibabalik doon
   var idToken = '';
   var catalog = {};        // { brand: { unit: [model, ...] } } galing sa pricelist (walang presyo)
   var branchList = [];     // galing sa Branch Contacts tab
@@ -203,7 +206,7 @@
     box.className = isError ? 'error' : 'success';
   }
   async function post(body) {
-    var res = await fetch(SCRIPT_URL, {
+    var res = await Busy.fetch(SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(body)
@@ -411,6 +414,11 @@
     if (!result.ok) { showTop(result.message, true); return; }
     showTop('', false);
     prefill(result.prefill);
+        if (result.dpRange) {
+      el('dpHint').textContent = 'Recommended downpayment: ' + peso(result.dpRange.low) + ' - ' +
+        peso(result.dpRange.high) + ' for a lower monthly amortization.';
+      el('dpHint').style.display = 'block';
+    }
     appOk = true;
     updateForm();
     quoteNow();
@@ -474,7 +482,7 @@
       return;
     }
     data.consent = true;
-    data.action = 'application';
+    data.requestId = Busy.newId();
     data.idToken = idToken;
     data.inquiryId = inquiryId;
     var button = el('sendButton');
