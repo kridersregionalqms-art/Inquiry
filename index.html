@@ -181,8 +181,16 @@
         showMessage('Invalid link. Please scan the QR code again.', true);
       }
     }
+    syncTermsBranch();
     branchesReady = true;
     updateForm();
+  }
+
+  // Ibinibigay sa Terms ang branch na napili (o ang naka-lock na branch ng walk-in link)
+  function syncTermsBranch() {
+    var name = linkBranch || document.querySelector('select[name="branch"]').value;
+    var found = branchList.filter(function (b) { return b.branch === name; })[0] || null;
+    Terms.setBranch(found);
   }
 
   var wantsAnother = false;
@@ -403,6 +411,7 @@
     setBranchMode(linkBranch);
     onBrandChange();
     Terms.init('termsArea');
+    syncTermsBranch();
     document.getElementById('termsArea').style.display = '';
     document.getElementById('sendButton').textContent = 'Send inquiry';
     document.getElementById('cancelEditButton').style.display = 'none';
@@ -682,6 +691,7 @@
     document.getElementById('modelPicker').style.display = (item && item.model) ? 'block' : 'none';
   }
 
+  document.querySelector('select[name="branch"]').addEventListener('change', syncTermsBranch);
   document.getElementById('brandSelect').addEventListener('change', onBrandChange);
   document.getElementById('unitSelect').addEventListener('change', onUnitSelectChange);
   document.getElementById('unitChoiceList').addEventListener('change', onUnitChoiceChange);
