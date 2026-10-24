@@ -406,8 +406,10 @@
     showTop('Checking your inquiry...', false);
     var result;
     try {
-      await catalogPromise;
-      result = await post({ action: 'appInit', idToken: idToken, inquiryId: inquiryId, payment: 'Installment' });
+      var initReq = post({ action: 'appInit', idToken: idToken, inquiryId: inquiryId, payment: 'Installment' });
+      initReq.catch(function () {});
+      await catalogPromise; // sabay na tumatakbo sa appInit
+      result = await initReq;
     } catch (err) {
       showTop('Could not check your inquiry. Check your connection and refresh the page.', true);
       return;
