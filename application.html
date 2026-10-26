@@ -10,6 +10,7 @@
   header { background: #0f2540; color: #fff; padding: 18px 20px; }
   header h1 { margin: 0; font-size: 20px; }
   header p { margin: 6px 0 0; font-size: 14px; color: #cbd5e1; }
+  header p.promo { margin-top: 10px; padding: 8px 10px; background: #fbbf24; color: #0f2540; border-radius: 6px; font-size: 13px; font-weight: bold; }
   .body { padding: 8px 20px 20px; }
   h2 { font-size: 16px; margin: 28px 0 0; padding-top: 14px; border-top: 1px solid #e2e8f0; }
   label { display: block; margin-top: 14px; font-size: 14px; font-weight: bold; }
@@ -40,10 +41,9 @@
   <header>
     <h1>APPLICATION FOR INSTALLMENT</h1>
     <p>Please complete the form below. All amounts are in Philippine pesos.</p>
+    <p class="promo">🎉 ENJOY LIFETIME FREE SERVICE WITH EVERY MOTORCYCLE PURCHASE!</p>
   </header>
   <div class="body">
-    <p style="font-size:14px">1. Sign in with the same Google account you used for your inquiry.</p>
-    <div id="googleButton"></div>
     <p id="who"></p>
     <p id="checkMsg"></p>
 
@@ -161,12 +161,13 @@
 <script src="terms.js"></script>
 <script src="spinner.js"></script>
 <script src="gate.js"></script>
+<script src="freebies.js"></script>
 <script>
   var GOOGLE_CLIENT_ID = '540530581718-307joed6m8omvlbgu6ppki2ciuetppt1.apps.googleusercontent.com';
   var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2DJAqRCxGUImWey5Wt45abTIp52M-027sGKFq4YCXETtTylx-OSTQuTmYrK-LBiOw/exec';
 
   var inquiryId = new URLSearchParams(location.search).get('inquiry') || '';
-    Gate.check(inquiryId); // kung hindi galing sa inquiry page, ibabalik doon
+  var gateOk = Gate.check(inquiryId); // kung hindi galing sa inquiry page, ibabalik doon
   var idToken = '';
   var catalog = {};        // { brand: { unit: [model, ...] } } galing sa pricelist (walang presyo)
   var branchList = [];     // galing sa Branch Contacts tab
@@ -206,12 +207,18 @@
     box.className = isError ? 'error' : 'success';
   }
   async function post(body) {
+    body.session = Gate.getSession(); // gikan sa sign-in sa inquiry page
     var res = await Busy.fetch(SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(body)
     });
-    return res.json();
+    var result = await res.json();
+    if (result && result.sessionExpired) { // expired ang session: balik sa inquiry page
+      Gate.clearSession();
+      Gate.back();
+    }
+    return result;
   }
 
   // Bubukas lang ang form kapag tama ang inquiry; naka-lock habang kinakalkula
@@ -220,9 +227,7 @@
     el('signInOverlay').style.display = appOk ? 'none' : 'block';
   }
   el('signInOverlay').addEventListener('click', function () {
-    if (idToken) return; // may ibang mensahe na kung naka-sign in
-    el('googleButton').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    showTop('Please sign in with your Google account above to continue.', true);
+    showTop('Please wait while we check your inquiry.', false);
   });
 
   // ===== Mga petsa =====
@@ -417,6 +422,7 @@
     if (!result.ok) { showTop(result.message, true); return; }
     showTop('', false);
     prefill(result.prefill);
+    el('who').textContent = 'Inquiry of ' + result.prefill.email;
         if (result.dpRange) {
       el('dpHint').textContent = 'Recommended downpayment: ' + peso(result.dpRange.low) + ' - ' +
         peso(result.dpRange.high) + ' for a lower monthly amortization.';
@@ -425,18 +431,6 @@
     appOk = true;
     updateForm();
     quoteNow();
-  }
-
-  function onGoogleLogin(response) {
-    idToken = response.credential;
-    var payload = JSON.parse(atob(idToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-    el('who').textContent = 'Signed in as ' + payload.email;
-    startApplication();
-  }
-
-  function initGoogle() {
-    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleLogin });
-    google.accounts.id.renderButton(el('googleButton'), { theme: 'outline', size: 'large' });
   }
 
   // ===== Contact ng branch pagkatapos mag-submit =====
@@ -529,7 +523,16 @@
 
   Terms.init('termsArea');
   updateForm();
+
+  // Walay sign-in: gikan sa inquiry page ang session. Welcome modal una, dayon check sa inquiry.
+  if (gateOk) {
+    Freebies.welcome({
+      title: 'K Riders Installment Application',
+      before: ['You are almost there! Complete your application to take the next step toward owning your dream motorcycle.'],
+      after: ['Your next ride starts with K Riders!'],
+      button: 'Continue to application'
+    }).then(startApplication);
+  }
 </script>
-<script src="https://accounts.google.com/gsi/client" async defer onload="initGoogle()"></script>
 </body>
 </html>
