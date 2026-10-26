@@ -2,6 +2,7 @@
 var Freebies = (function () {
   var cache = null;
   var PROMO = '\uD83C\uDF89 ENJOY LIFETIME FREE SERVICE WITH EVERY MOTORCYCLE PURCHASE!';
+  var DISCLAIMER = 'Freebies and promotional benefits vary depending on the motorcycle unit purchased and the applicable promo. Please contact your selected K Riders branch to confirm the available offers and their terms and conditions.';
 
   function injectStyle() {
     if (document.getElementById('freebiesStyle')) return;
@@ -37,21 +38,20 @@ var Freebies = (function () {
     return lines;
   }
 
-  // Blangko nga row = bag-ong grupo; ang linya nga nagsugod sa "&" kay plain text
+  // Ang bullets kay galing sa freebies tab (column A). Ang blangko nga row, ang linya nga nagsugod sa "&",
+  // ug ang linya nga naay "Lifetime" kay dili isulod sa bullets, kay naa na ang Lifetime Free Service sa PROMO banner.
   function renderList(lines) {
-    var box = make('div', 'background:#f1f5f9; border-radius:8px; padding:10px 14px; margin:12px 0');
-    box.appendChild(make('div', 'font-weight:bold; font-size:15px', '\uD83C\uDF81 Your freebies'));
-    var ul = null;
-    lines.forEach(function (line) {
-      if (!line) { ul = null; return; }
-      if (line.charAt(0) === '&') {
-        ul = null;
-        box.appendChild(make('div', 'text-align:center; font-size:14px; color:#334155; margin:4px 0', line));
-        return;
-      }
-      if (!ul) { ul = make('ul', 'margin:6px 0; padding-left:22px; font-size:15px'); box.appendChild(ul); }
-      ul.appendChild(make('li', 'margin:3px 0', line));
+    var items = lines.filter(function (line) {
+      return line && line.charAt(0) !== '&' && !/lifetime/i.test(line);
     });
+    var box = make('div', 'background:#f1f5f9; border-radius:8px; padding:12px 14px; margin:12px 0');
+    box.appendChild(make('div', 'font-weight:bold; font-size:16px', '\uD83C\uDF81 EXCITING FREEBIES & BENEFITS AWAIT!'));
+    if (items.length) {
+      box.appendChild(make('p', 'font-size:14px; margin:8px 0', 'Depending on the motorcycle unit you choose, you may also enjoy exciting freebies and benefits, such as:'));
+      var ul = make('ul', 'margin:6px 0; padding-left:22px; font-size:15px');
+      items.forEach(function (item) { ul.appendChild(make('li', 'margin:3px 0', item)); });
+      box.appendChild(ul);
+    }
     return box;
   }
 
@@ -70,8 +70,9 @@ var Freebies = (function () {
       dialog.appendChild(make('div', 'font-size:20px; font-weight:bold; margin-bottom:10px', opts.title));
       (opts.before || []).forEach(function (t) { dialog.appendChild(make('p', 'font-size:14px; margin:8px 0', t)); });
       dialog.appendChild(make('div', 'background:#fbbf24; color:#0f2540; font-weight:bold; font-size:14px; border-radius:6px; padding:10px; margin:12px 0; text-align:center', PROMO));
-      if (lines.length) dialog.appendChild(renderList(lines));
+      dialog.appendChild(renderList(lines));
       (opts.after || []).forEach(function (t) { dialog.appendChild(make('p', 'font-size:14px; margin:8px 0', t)); });
+      dialog.appendChild(make('p', 'font-size:12px; color:#475569; margin:12px 0 0', DISCLAIMER));
 
       var go = make('button', 'width:100%; margin-top:14px; padding:12px; border:0; border-radius:6px; background:#2563eb; color:#fff; font-size:16px; font-weight:bold; cursor:pointer', opts.button || 'Continue');
       go.type = 'button';
