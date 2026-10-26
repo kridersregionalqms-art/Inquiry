@@ -10,6 +10,7 @@
   header { background: #0f2540; color: #fff; padding: 18px 20px; }
   header h1 { margin: 0; font-size: 20px; }
   header p { margin: 6px 0 0; font-size: 14px; color: #cbd5e1; }
+  header p.promo { margin-top: 10px; padding: 8px 10px; background: #fbbf24; color: #0f2540; border-radius: 6px; font-size: 13px; font-weight: bold; }
   .body { padding: 8px 20px 20px; }
   label { display: block; margin-top: 14px; font-size: 14px; font-weight: bold; }
   input, select, textarea { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 10px;
@@ -29,8 +30,9 @@
 <body>
 <div class="card">
   <header>
-    <h1>K RIDERS ONLINE INQUIRY</h1>
+    <h1>K RIDERS CUSTOMER INQUIRY</h1>
     <p>Ask about our motorcycle units, prices and financing options. We will get back to you.</p>
+    <p class="promo">🎉 ENJOY LIFETIME FREE SERVICE WITH EVERY MOTORCYCLE PURCHASE!</p>
   </header>
   <div class="body">
     <p style="font-size:14px">1. Sign in with your Google account to continue.</p>
@@ -104,6 +106,7 @@
 <script src="terms.js"></script>
 <script src="spinner.js"></script>
 <script src="gate.js"></script>
+<script src="freebies.js"></script>
 <script>
   // ===== SETTINGS: palitan ang dalawang ito =====
   var GOOGLE_CLIENT_ID = '540530581718-307joed6m8omvlbgu6ppki2ciuetppt1.apps.googleusercontent.com';
@@ -275,6 +278,7 @@
       return;
     }
     showTopMessage('', false);
+    if (result.session) Gate.setSession(result.session); // gamiton sa application/cod, walay sign-in
     var expiredList = result.expired || [];
     if (result.inquiries && result.inquiries.length) {
       showActiveInquiries(result.inquiries, expiredList);
@@ -810,6 +814,16 @@
     showMessage('Invalid link. Please scan the QR code again.', true);
   } else {
     branchesPromise = loadBranches();
+    Freebies.welcome({
+      title: 'K Riders Customer Inquiry',
+      before: ['Looking for your next motorcycle? Make every ride more rewarding with K Riders Motorcycle Sales Center, Inc.! 🏍️'],
+      after: [
+        'Discover our motorcycle units, check prices, explore financing options, and find the right motorcycle for your needs and budget.',
+        '📩 Fill out our inquiry form today! Let K Riders help you take the next step toward owning your dream motorcycle. Our team will get back to you to assist with your inquiry.',
+        'Your next ride starts with K Riders!'
+      ],
+      button: 'Continue to fill up'
+    });
   }
 </script>
 <script src="https://accounts.google.com/gsi/client" async defer onload="initGoogle()"></script>
