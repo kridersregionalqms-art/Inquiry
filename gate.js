@@ -13,7 +13,32 @@ var Gate = (function () {
     }
   }
 
+  var SESSION_KEY = 'krSession'; // session token gikan sa server (human ma-sign in sa inquiry page)
+
+  function getSession() {
+    try { return sessionStorage.getItem(SESSION_KEY) || ''; } catch (err) { return ''; }
+  }
+
+  // Ibalik sa inquiry page
+  function goBack() {
+    var back = 'index.html';
+    try {
+      var saved = localStorage.getItem(LINK_KEY) || '';
+      if (saved.indexOf(location.origin + '/') === 0) back = saved; // sarili nating site lang
+    } catch (err) { /* gamitin ang index.html */ }
+    document.documentElement.style.visibility = 'hidden';
+    location.replace(back);
+  }
+
   return {
+    setSession: function (token) {
+      try { sessionStorage.setItem(SESSION_KEY, token); } catch (err) { /* wala nang magagawa */ }
+    },
+    getSession: getSession,
+    clearSession: function () {
+      try { sessionStorage.removeItem(SESSION_KEY); } catch (err) { /* ayos lang */ }
+    },
+    back: goBack,
     // Tinatawag ng inquiry page kapag gumawa ng link papunta sa application o cod
     mark: function (inquiryId) {
       try {
@@ -26,15 +51,9 @@ var Gate = (function () {
     // Tinatawag ng application at cod pages sa simula. Kung hindi dumaan sa inquiry page, ibabalik doon.
     check: function (inquiryId) {
       var list = readIds();
-      if (list === null) return true; // hindi mabasa ang storage; ang server pa rin ang magsusuri
-      if (inquiryId && list.indexOf(inquiryId) !== -1) return true;
-      var back = 'index.html';
-      try {
-        var saved = localStorage.getItem(LINK_KEY) || '';
-        if (saved.indexOf(location.origin + '/') === 0) back = saved; // sarili nating site lang
-      } catch (err) { /* gamitin ang index.html */ }
-      document.documentElement.style.visibility = 'hidden';
-      location.replace(back);
+      var idOk = (list === null) || (inquiryId && list.indexOf(inquiryId) !== -1);
+      if (idOk && getSession()) return true; // kinahanglan naay session gikan sa sign-in sa inquiry page
+      goBack();
       return false;
     }
   };
