@@ -59,7 +59,9 @@
         <label>Contact Number<input id="pPhone" readonly></label>
         <p class="hint">To change these, please edit your inquiry on the inquiry page.</p>
 
-        <label>Birthdate *<input type="date" name="dob" id="dob" required></label>
+        <label>Birthdate *</label>
+<div id="dobPicker"></div>
+<input type="hidden" name="dob" id="dob">
         <label>Birthplace *<input name="birthplace" required></label>
         <label>Citizenship *
           <select name="citizenship" id="citizenship" required>
@@ -107,6 +109,7 @@
 <script src="spinner.js"></script>
 <script src="gate.js"></script>
 <script src="freebies.js"></script>
+<script src="dob-picker.js"></script>
 <script>
   var GOOGLE_CLIENT_ID = '540530581718-307joed6m8omvlbgu6ppki2ciuetppt1.apps.googleusercontent.com';
   var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2DJAqRCxGUImWey5Wt45abTIp52M-027sGKFq4YCXETtTylx-OSTQuTmYrK-LBiOw/exec';
@@ -162,11 +165,9 @@
   var today = new Date();
   var threeMonths = new Date();
   threeMonths.setMonth(threeMonths.getMonth() + 3);
-  var eighteen = new Date();
-  eighteen.setFullYear(eighteen.getFullYear() - 18);
   el('releaseDate').min = isoLocal(today);
   el('releaseDate').max = isoLocal(threeMonths);
-  el('dob').max = isoLocal(eighteen);
+  DobPicker.init('dobPicker', 'dob', { minAge: 18, maxAge: 100 });
 
   // "Others" (specify)
   function bindOther(selector, otherId, isSelect) {
