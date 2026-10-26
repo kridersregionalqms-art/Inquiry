@@ -147,7 +147,9 @@
           <p class="hint" style="margin-top:8px">All calculated amounts are indicative and may be subject to change depending on the submitted and verified application information and documents.</p>
         </div>
 
-        <label>Expected Date of Release *<input type="date" name="releaseDate" id="releaseDate" required></label>
+        <label>Expected Date of Release *</label>
+        <div id="releaseDatePicker"></div>
+        <input type="hidden" name="releaseDate" id="releaseDate">
         <p class="hint">Choose a date from today up to 3 months ahead.</p>
         <label>First Due Date *
           <select name="firstDue" id="firstDue" required>
@@ -167,7 +169,7 @@
 <script src="spinner.js"></script>
 <script src="gate.js"></script>
 <script src="freebies.js"></script>
-<script src="dob-picker.js"></script>
+<script src="date-picker.js"></script>
 <script>
   var GOOGLE_CLIENT_ID = '540530581718-307joed6m8omvlbgu6ppki2ciuetppt1.apps.googleusercontent.com';
   var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2DJAqRCxGUImWey5Wt45abTIp52M-027sGKFq4YCXETtTylx-OSTQuTmYrK-LBiOw/exec';
@@ -270,10 +272,13 @@
   var today = new Date();
   var threeMonths = new Date();
   threeMonths.setMonth(threeMonths.getMonth() + 3);
-  el('releaseDate').min = isoLocal(today);
-  el('releaseDate').max = isoLocal(threeMonths);
-  DobPicker.init('dobPicker', 'dob', { minAge: 18, maxAge: 100 });
-  DobPicker.init('cmDobPicker', 'cmDob', { minAge: 18, maxAge: 100 });
+  var hundredYearsAgo = new Date();
+  hundredYearsAgo.setFullYear(hundredYearsAgo.getFullYear() - 100);
+  var eighteenYearsAgo = new Date();
+  eighteenYearsAgo.setFullYear(eighteenYearsAgo.getFullYear() - 18);
+  DatePicker.init('releaseDatePicker', 'releaseDate', { minDate: isoLocal(today), maxDate: isoLocal(threeMonths) });
+  DatePicker.init('dobPicker', 'dob', { minDate: isoLocal(hundredYearsAgo), maxDate: isoLocal(eighteenYearsAgo) });
+  DatePicker.init('cmDobPicker', 'cmDob', { minDate: isoLocal(hundredYearsAgo), maxDate: isoLocal(eighteenYearsAgo) });
   el('releaseDate').addEventListener('change', updateFirstDue);
 
   // ===== Income at expenses =====
