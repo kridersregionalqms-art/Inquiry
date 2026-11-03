@@ -767,6 +767,10 @@
     if (editingId) {
       data.action = 'edit';
       data.inquiryId = editingId;
+      // Disabled fields (payment, locked branch) are skipped by FormData — re-add them manually
+      data.payment = document.querySelector('select[name="payment"]').value;
+      var branchSelect = document.querySelector('select[name="branch"]');
+      data.branch = branchSelect.disabled ? document.getElementById('branchFixedText').value : branchSelect.value;
     } else if (!Terms.isAccepted()) {
       showMessage('Please read and accept the Terms & Conditions to send your inquiry.', true);
       Terms.requireAcceptance();
